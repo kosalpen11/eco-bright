@@ -1,0 +1,266 @@
+@config "../../tailwind.config.ts";
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --font-sans-active: var(--font-outfit);
+  --font-display-active: var(--font-bebas);
+  --app-locale-label-tracking: 0.22em;
+  --app-locale-chip-tracking: 0.16em;
+  --app-locale-display-tracking: 0.05em;
+  --app-locale-label-line-height: 1.2;
+  --app-locale-display-line-height: 0.92;
+  --app-bg: #f3f7fb;
+  --app-bg-soft: #ffffff;
+  --app-surface: #f8fbff;
+  --app-surface-2: #eef4fb;
+  --app-surface-3: #e3ecf7;
+  --app-card: #ffffff;
+  --app-card-hover: #f8fbff;
+  --app-border: rgba(15, 23, 42, 0.09);
+  --app-border-strong: rgba(15, 23, 42, 0.16);
+  --app-primary: #10b981;
+  --app-primary-hover: #059669;
+  --app-primary-soft: rgba(16, 185, 129, 0.12);
+  --app-secondary: #3b82f6;
+  --app-secondary-hover: #2563eb;
+  --app-secondary-soft: rgba(59, 130, 246, 0.12);
+  --app-accent: #d97706;
+  --app-accent-soft: rgba(217, 119, 6, 0.12);
+  --app-text: #0f172a;
+  --app-text-soft: #1e293b;
+  --app-text-muted: #475569;
+  --app-text-faint: #64748b;
+  --app-success: #16a34a;
+  --app-success-soft: rgba(22, 163, 74, 0.12);
+  --app-warning: #d97706;
+  --app-warning-soft: rgba(217, 119, 6, 0.12);
+  --app-danger: #e11d48;
+  --app-danger-soft: rgba(225, 29, 72, 0.12);
+  --app-info: #0284c7;
+  --app-info-soft: rgba(2, 132, 199, 0.12);
+  --app-qr: #ffffff;
+  --app-qr-text: #0f172a;
+  --app-qr-surface: rgba(15, 23, 42, 0.06);
+  --app-qr-border: rgba(15, 23, 42, 0.1);
+  --app-qr-muted: rgba(15, 23, 42, 0.7);
+  --app-overlay: rgba(15, 23, 42, 0.4);
+  --app-selection: rgba(16, 185, 129, 0.24);
+  --app-grid-line: rgba(15, 23, 42, 0.06);
+  --app-grid-mask: rgba(255, 255, 255, 0.96);
+  --app-grid-fade-highlight: rgba(217, 119, 6, 0.1);
+  --app-grid-fade-sheen: rgba(255, 255, 255, 0.65);
+  --app-scroll-thumb: rgba(16, 185, 129, 0.32);
+  --app-scroll-thumb-strong: rgba(16, 185, 129, 0.24);
+  --app-shadow-card: 0 24px 60px rgba(15, 23, 42, 0.08);
+  --app-shadow-panel: 0 28px 80px rgba(15, 23, 42, 0.14);
+  --app-shadow-sheet: 0 24px 80px rgba(15, 23, 42, 0.18);
+  --app-shadow-button-primary: 0 18px 36px rgba(16, 185, 129, 0.18);
+  --app-shadow-surface: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+:root[data-locale="km"] {
+  --font-sans-active: var(--font-noto-sans-khmer), var(--font-outfit);
+  --font-display-active: var(--font-noto-sans-khmer), var(--font-outfit);
+  --app-locale-label-tracking: 0.03em;
+  --app-locale-chip-tracking: 0.02em;
+  --app-locale-display-tracking: 0.01em;
+  --app-locale-label-line-height: 1.45;
+  --app-locale-display-line-height: 1.12;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #050816;
+  --app-bg-soft: #0a1020;
+  --app-surface: #0b1020;
+  --app-surface-2: #12192b;
+  --app-surface-3: #182238;
+  --app-card: #10182a;
+  --app-card-hover: #16213a;
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-border-strong: rgba(255, 255, 255, 0.16);
+  --app-primary: #34d399;
+  --app-primary-hover: #10b981;
+  --app-primary-soft: rgba(52, 211, 153, 0.12);
+  --app-secondary: #60a5fa;
+  --app-secondary-hover: #3b82f6;
+  --app-secondary-soft: rgba(96, 165, 250, 0.12);
+  --app-accent: #fbbf24;
+  --app-accent-soft: rgba(251, 191, 36, 0.12);
+  --app-text: #ffffff;
+  --app-text-soft: #cbd5e1;
+  --app-text-muted: #94a3b8;
+  --app-text-faint: #64748b;
+  --app-success: #22c55e;
+  --app-success-soft: rgba(34, 197, 94, 0.12);
+  --app-warning: #f59e0b;
+  --app-warning-soft: rgba(245, 158, 11, 0.12);
+  --app-danger: #fb7185;
+  --app-danger-soft: rgba(251, 113, 133, 0.12);
+  --app-info: #38bdf8;
+  --app-info-soft: rgba(56, 189, 248, 0.12);
+  --app-overlay: rgba(5, 8, 22, 0.78);
+  --app-selection: rgba(52, 211, 153, 0.28);
+  --app-grid-line: rgba(255, 255, 255, 0.04);
+  --app-grid-mask: rgba(0, 0, 0, 0.96);
+  --app-grid-fade-highlight: rgba(251, 191, 36, 0.12);
+  --app-grid-fade-sheen: rgba(255, 255, 255, 0.025);
+  --app-scroll-thumb: rgba(52, 211, 153, 0.32);
+  --app-scroll-thumb-strong: rgba(52, 211, 153, 0.24);
+  --app-shadow-card: 0 24px 60px rgba(3, 6, 18, 0.4);
+  --app-shadow-panel: 0 28px 80px rgba(3, 6, 18, 0.48);
+  --app-shadow-sheet: 0 24px 80px rgba(3, 6, 18, 0.48);
+  --app-shadow-button-primary: 0 18px 36px rgba(16, 185, 129, 0.2);
+  --app-shadow-surface: 0 16px 40px rgba(3, 6, 18, 0.3);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans-active);
+  --font-display: var(--font-display-active);
+}
+
+* {
+  border-color: var(--app-border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--font-sans-active), var(--font-outfit), sans-serif;
+  background-image:
+    radial-gradient(circle at top right, var(--app-primary-soft), transparent 28%),
+    radial-gradient(circle at left 18%, var(--app-secondary-soft), transparent 22%),
+    radial-gradient(circle at 60% 18%, var(--app-accent-soft), transparent 18%),
+    linear-gradient(180deg, var(--app-bg-soft), var(--app-bg) 34%);
+}
+
+.locale-label {
+  letter-spacing: var(--app-locale-label-tracking);
+  line-height: var(--app-locale-label-line-height);
+}
+
+.locale-chip {
+  letter-spacing: var(--app-locale-chip-tracking);
+  line-height: var(--app-locale-label-line-height);
+}
+
+.locale-display {
+  letter-spacing: var(--app-locale-display-tracking);
+  line-height: var(--app-locale-display-line-height);
+}
+
+.locale-body {
+  line-height: 1.55;
+}
+
+.locale-compact {
+  line-height: 1.35;
+}
+
+:root[data-locale="km"] .locale-display {
+  text-transform: none;
+}
+
+:root[data-locale="km"] .locale-label,
+:root[data-locale="km"] .locale-chip {
+  text-transform: none;
+}
+
+:root[data-locale="km"] .locale-chip {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+:root[data-locale="km"] .locale-nowrap {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+::selection {
+  background: var(--app-selection);
+  color: var(--app-text);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(var(--app-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--app-grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, var(--app-grid-mask), transparent 88%);
+}
+
+.grid-fade {
+  background-image:
+    radial-gradient(circle at top left, var(--app-grid-fade-highlight), transparent 24%),
+    linear-gradient(160deg, var(--app-grid-fade-sheen), transparent 58%);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.eco-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scroll-thumb) transparent;
+}
+
+.eco-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.eco-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eco-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--app-scroll-thumb-strong);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .hide-on-print {
+    display: none !important;
+  }
+}
