@@ -149,3 +149,4 @@ The current app stays Telegram-first for the user-facing order handoff. For V2, 
 - [progress.md](/Users/kosalpen/Documents/eco-bright/progress.md)
 - [prompt.md](/Users/kosalpen/Documents/eco-bright/prompt.md)
 - [qa-checklist.md](/Users/kosalpen/Documents/eco-bright/qa-checklist.md)
+- [NETLIFY_DEPLOY.md](/Users/kosalpen/Documents/eco-bright/NETLIFY_DEPLOY.md)
