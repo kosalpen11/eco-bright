@@ -59,6 +59,7 @@ cp .env.example .env.local
 ```
 
 Public storefront settings:
+- `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SHOP_NAME`
 - `NEXT_PUBLIC_ORDER_TELEGRAM_URL`
 - `NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL`
@@ -68,6 +69,7 @@ Server-only database setting:
 - `DATABASE_URL`
 
 `DATABASE_URL` must stay server-side only.
+Do not place API keys, database credentials, or tokens in any `NEXT_PUBLIC_*` variable because those values are exposed in the browser bundle.
 
 ## Project Structure
 ```txt

@@ -38,6 +38,7 @@ Add the values from `.env.example`:
 
 ```env
 DATABASE_URL=""
+NEXT_PUBLIC_SITE_URL="https://your-site.netlify.app"
 NEXT_PUBLIC_SHOP_NAME="ECO BRIGHT LED & SOLAR"
 NEXT_PUBLIC_ORDER_TELEGRAM_URL="https://t.me/ecobrightledsolar"
 NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL="+85512710410"
@@ -48,7 +49,10 @@ Notes:
 
 - `DATABASE_URL` must stay server-side only.
 - `NEXT_PUBLIC_*` values are exposed to the browser.
+- Never place tokens, passwords, private keys, or database credentials in `NEXT_PUBLIC_*`.
 - If you change env vars later, trigger a new deploy.
+
+If a secret was ever committed to Git history or exposed in build logs, rotate it immediately. Treat previously committed secrets as compromised.
 
 ## 3. Create a Netlify Build Hook
 
