@@ -2,6 +2,7 @@
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { SearchX, SlidersHorizontal } from "lucide-react";
+import { CartAdjustPanel } from "@/components/cart/cart-adjust-panel";
 import { InvoicePanel } from "@/components/cart/invoice-panel";
 import { useLocale } from "@/components/locale/locale-provider";
 import { SectionHeader } from "@/components/common/section-header";
@@ -209,6 +210,8 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
             onAddToCart={addItem}
             onResetFilters={resetCatalogView}
           />
+
+          <CartAdjustPanel />
         </div>
 
         <aside id="invoice" className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-auto">

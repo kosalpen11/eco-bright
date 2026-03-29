@@ -253,6 +253,11 @@ export const uiText = {
     },
     invoice: {
       invoice: "Invoice",
+      checkoutReady: "Checkout",
+      checkoutDescription:
+        "Adjust items below, then confirm checkout to open the invoice review.",
+      confirmCheckout: "Confirm checkout",
+      backToAdjustItems: "Back to adjust items",
       orderSummary: "Order Summary",
       reviewDescription: "Review items, generate QR, and continue to Telegram checkout.",
       items: "Items",
@@ -272,6 +277,7 @@ export const uiText = {
       textInvoiceDescription: "Readable order text for copy, share, or manual sending.",
       adjustItems: "Adjust items",
       adjustItemsDescription: "Update quantities before checkout.",
+      removeItem: "Remove",
       unitPrice: "Unit price",
       lineTotal: "Line total",
       checkoutTarget: "Checkout",
@@ -416,6 +422,11 @@ export const uiText = {
     },
     invoice: {
       invoice: "វិក្កយបត្រ",
+      checkoutReady: "ត្រៀមបញ្ជាទិញ",
+      checkoutDescription:
+        "កែទំនិញខាងក្រោមជាមុន រួចចុចបញ្ជាក់ការបញ្ជាទិញ ដើម្បីមើលវិក្កយបត្រ។",
+      confirmCheckout: "បញ្ជាក់ការបញ្ជាទិញ",
+      backToAdjustItems: "ត្រឡប់ទៅកែទំនិញ",
       orderSummary: "សង្ខេបការបញ្ជាទិញ",
       reviewDescription: "ពិនិត្យទំនិញ បង្កើត QR ហើយបន្តការបញ្ជាទិញតាម Telegram។",
       items: "មុខទំនិញ",
@@ -435,6 +446,7 @@ export const uiText = {
       textInvoiceDescription: "អត្ថបទការបញ្ជាទិញដែលអាចចម្លង ចែករំលែក ឬផ្ញើដោយដៃ។",
       adjustItems: "កែប្រែមុខទំនិញ",
       adjustItemsDescription: "កែចំនួនមុនពេលបន្តការបញ្ជាទិញ។",
+      removeItem: "ដកចេញ",
       unitPrice: "តម្លៃឯកតា",
       lineTotal: "តម្លៃសរុប",
       checkoutTarget: "គោលដៅបញ្ជាទិញ",

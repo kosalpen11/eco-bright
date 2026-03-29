@@ -1,10 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronUp, ReceiptText, ScrollText, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronUp,
+  ReceiptText,
+  ScrollText,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import QRCode from "react-qr-code";
-import { CartItemRow } from "@/components/cart/cart-item-row";
 import { InvoiceQr } from "@/components/cart/invoice-qr";
 import { ShareInvoiceActions } from "@/components/cart/share-invoice-actions";
 import { useLocale } from "@/components/locale/locale-provider";
@@ -21,19 +27,18 @@ import type { Locale } from "@/lib/locale";
 import { encodeInvoiceQr } from "@/lib/qr";
 import { getTelegramTargetLabel } from "@/lib/telegram";
 import { useCartStore } from "@/store/cart-store";
-import type { CartItem } from "@/types/cart";
 import type { Invoice } from "@/types/invoice";
 
 interface InvoiceCardProps {
   exportTargetId: string;
   hasHydrated: boolean;
   invoice: Invoice | null;
-  items: CartItem[];
   totalCount: number;
-  updateQty: (id: string, qty: number) => void;
-  removeItem: (id: string) => void;
   clearCart: () => void;
   locale: Locale;
+  reviewOpen: boolean;
+  onOpenReview: () => void;
+  onBackToAdjustItems: () => void;
   stickyActions?: boolean;
 }
 
@@ -366,71 +371,20 @@ function TextInvoicePreview({
   );
 }
 
-function EditableItemsSection({
-  items,
-  locale,
-  updateQty,
-  removeItem,
-}: {
-  items: CartItem[];
-  locale: Locale;
-  updateQty: (id: string, qty: number) => void;
-  removeItem: (id: string) => void;
-}) {
-  const copy = getUiText(locale).invoice;
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <p className="locale-label text-xs font-semibold uppercase text-app-primary">
-          {copy.adjustItems}
-        </p>
-        <p className="mt-1 text-sm text-app-text-muted">
-          {copy.adjustItemsDescription}
-        </p>
-      </div>
-
-      <motion.ul
-        layout
-        className="eco-scrollbar max-h-[320px] space-y-3 overflow-auto pr-1 xl:max-h-[360px]"
-      >
-        <AnimatePresence initial={false}>
-          {items.map((item) => (
-            <motion.li
-              key={item.id}
-              layout
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <CartItemRow
-                item={item}
-                onIncrease={() => updateQty(item.id, item.qty + 1)}
-                onDecrease={() => updateQty(item.id, item.qty - 1)}
-                onRemove={() => removeItem(item.id)}
-              />
-            </motion.li>
-          ))}
-        </AnimatePresence>
-      </motion.ul>
-    </div>
-  );
-}
-
 function InvoiceCard({
   exportTargetId,
   hasHydrated,
   invoice,
-  items,
   totalCount,
-  updateQty,
-  removeItem,
   clearCart,
   locale,
+  reviewOpen,
+  onOpenReview,
+  onBackToAdjustItems,
   stickyActions = false,
 }: InvoiceCardProps) {
   const copy = getUiText(locale).invoice;
-  const hasItems = items.length > 0;
+  const hasItems = Boolean(invoice && invoice.items.length > 0);
 
   if (!hasHydrated) {
     return (
@@ -458,13 +412,13 @@ function InvoiceCard({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="locale-label text-xs font-semibold uppercase text-app-primary">
-              {copy.invoice}
+              {reviewOpen ? copy.invoice : copy.checkoutReady}
             </p>
             <h3 className="mt-1 text-2xl font-bold text-app-text xl:text-3xl">
-              {copy.orderSummary}
+              {reviewOpen ? copy.orderSummary : copy.checkoutReady}
             </h3>
             <p className="mt-1 max-w-xl text-sm text-app-text-muted">
-              {copy.reviewDescription}
+              {reviewOpen ? copy.reviewDescription : copy.checkoutDescription}
             </p>
           </div>
 
@@ -498,17 +452,56 @@ function InvoiceCard({
                 variant="export"
               />
             </div>
-            <InvoicePaperPreview
-              invoice={invoice}
-              locale={locale}
-            />
-            <TextInvoicePreview invoice={invoice} locale={locale} />
-            <EditableItemsSection
-              items={items}
-              locale={locale}
-              updateQty={updateQty}
-              removeItem={removeItem}
-            />
+
+            {reviewOpen ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onBackToAdjustItems}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-app-text-muted transition hover:text-app-text"
+                >
+                  <ChevronLeft className="size-4" />
+                  {copy.backToAdjustItems}
+                </button>
+
+                <InvoicePaperPreview
+                  invoice={invoice}
+                  locale={locale}
+                />
+                <TextInvoicePreview invoice={invoice} locale={locale} />
+              </>
+            ) : (
+              <div className="rounded-[1.75rem] border border-app-border bg-app-surface-2 p-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
+                    <p className="locale-label text-[11px] font-semibold uppercase text-app-text-faint">
+                      {copy.invoiceId}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-app-text">
+                      {invoice.invoiceId}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
+                    <p className="locale-label text-[11px] font-semibold uppercase text-app-text-faint">
+                      {copy.checkoutTarget}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-app-text">
+                      {getTelegramTargetLabel(invoice.telegramUrl)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
+                  <div className="flex items-center justify-between text-sm text-app-text-muted">
+                    <span>{copy.created}</span>
+                    <span className="text-right text-app-text">
+                      {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="rounded-[1.75rem] border border-dashed border-app-border bg-app-bg-soft px-5 py-10 text-center">
@@ -532,21 +525,35 @@ function InvoiceCard({
             : "mt-5"
         }
       >
-        <ShareInvoiceActions
-          invoice={invoice}
-          disabled={!hasItems}
-          exportTargetId={exportTargetId}
-        />
+        {reviewOpen ? (
+          <>
+            <ShareInvoiceActions
+              invoice={invoice}
+              disabled={!hasItems}
+              exportTargetId={exportTargetId}
+            />
 
-        <button
-          type="button"
-          onClick={clearCart}
-          disabled={!hasItems}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-danger bg-app-danger-soft px-4 py-3 text-sm font-semibold text-app-danger transition hover:bg-app-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Trash2 className="h-4 w-4" />
-          {copy.clearInvoice}
-        </button>
+            <button
+              type="button"
+              onClick={clearCart}
+              disabled={!hasItems}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-danger bg-app-danger-soft px-4 py-3 text-sm font-semibold text-app-danger transition hover:bg-app-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {copy.clearInvoice}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenReview}
+            disabled={!hasItems}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-primary bg-app-primary px-4 py-3 text-sm font-semibold text-app-bg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {copy.confirmCheckout}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -556,16 +563,16 @@ export function InvoicePanel() {
   const { locale } = useLocale();
   const copy = getUiText(locale).invoice;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const items = useCartStore((state) => state.items);
   const invoiceMeta = useCartStore((state) => state.invoiceMeta);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
-  const updateQty = useCartStore((state) => state.updateQty);
-  const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
 
   const invoice = useMemo(() => buildInvoice(items, invoiceMeta), [items, invoiceMeta]);
   const totalCount = getCartCount(items);
   const mobileTotal = formatCurrency(invoice?.total ?? 0);
+  const reviewVisible = reviewOpen && items.length > 0;
 
   return (
     <>
@@ -574,12 +581,12 @@ export function InvoicePanel() {
           exportTargetId="invoice-image-export-desktop"
           hasHydrated={hasHydrated}
           invoice={invoice}
-          items={items}
           totalCount={totalCount}
-          updateQty={updateQty}
-          removeItem={removeItem}
           clearCart={clearCart}
           locale={locale}
+          reviewOpen={reviewVisible}
+          onOpenReview={() => setReviewOpen(true)}
+          onBackToAdjustItems={() => setReviewOpen(false)}
         />
       </div>
 
@@ -630,12 +637,12 @@ export function InvoicePanel() {
                   exportTargetId="invoice-image-export-mobile"
                   hasHydrated={hasHydrated}
                   invoice={invoice}
-                  items={items}
                   totalCount={totalCount}
-                  updateQty={updateQty}
-                  removeItem={removeItem}
                   clearCart={clearCart}
                   locale={locale}
+                  reviewOpen={reviewVisible}
+                  onOpenReview={() => setReviewOpen(true)}
+                  onBackToAdjustItems={() => setReviewOpen(false)}
                   stickyActions
                 />
                 {!invoice ? (
