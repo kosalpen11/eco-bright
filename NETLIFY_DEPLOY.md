@@ -36,15 +36,11 @@ Open:
 
 `Site configuration` → `Environment variables`
 
-Add the values from `.env.example`:
+Recommended minimum variables for Netlify:
 
 ```env
 DATABASE_URL=""
 NEXT_PUBLIC_SITE_URL="https://your-site.netlify.app"
-NEXT_PUBLIC_SHOP_NAME="ECO BRIGHT LED & SOLAR"
-NEXT_PUBLIC_ORDER_TELEGRAM_URL="https://t.me/ecobrightledsolar"
-NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL="+85512710410"
-NEXT_PUBLIC_DEFAULT_CURRENCY="USD"
 ```
 
 Notes:
@@ -53,8 +49,30 @@ Notes:
 - `NEXT_PUBLIC_*` values are exposed to the browser.
 - Never place tokens, passwords, private keys, or database credentials in `NEXT_PUBLIC_*`.
 - If you change env vars later, trigger a new deploy.
+- This repo already has public defaults for shop name, Telegram links, and currency. You do not need to set those in Netlify unless you intentionally want to override them.
 
 If a secret was ever committed to Git history or exposed in build logs, rotate it immediately. Treat previously committed secrets as compromised.
+
+### If Netlify flags public `NEXT_PUBLIC_*` values as exposed secrets
+
+Those values are usually false positives, not real secrets.
+
+Recommended fix:
+
+1. Remove unneeded public overrides from Netlify, especially:
+   - `NEXT_PUBLIC_SHOP_NAME`
+   - `NEXT_PUBLIC_ORDER_TELEGRAM_URL`
+   - `NEXT_PUBLIC_TELEGRAM_URL`
+2. Keep only the public variables you actually need to override.
+3. Trigger a fresh deploy.
+
+If you intentionally want Netlify to accept those exact public strings, add a safelist variable in Netlify:
+
+```txt
+SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES
+```
+
+Set its value to the exact public strings Netlify is flagging, separated by commas.
 
 ## 3. Create a Netlify Build Hook
 

@@ -28,9 +28,7 @@ function normalizeTelegramBaseUrl(value: string) {
 }
 
 export const TELEGRAM_PUBLIC_URL = normalizeTelegramBaseUrl(
-  process.env.NEXT_PUBLIC_ORDER_TELEGRAM_URL?.trim() ||
-    process.env.NEXT_PUBLIC_TELEGRAM_URL?.trim() ||
-    DEFAULT_TELEGRAM_PUBLIC_URL,
+  process.env.NEXT_PUBLIC_ORDER_TELEGRAM_URL?.trim() || DEFAULT_TELEGRAM_PUBLIC_URL,
 );
 export const TELEGRAM_CHECKOUT_URL = normalizeTelegramBaseUrl(
   process.env.NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL?.trim() || TELEGRAM_PUBLIC_URL,

@@ -70,6 +70,7 @@ Server-only database setting:
 
 `DATABASE_URL` must stay server-side only.
 Do not place API keys, database credentials, or tokens in any `NEXT_PUBLIC_*` variable because those values are exposed in the browser bundle.
+For Netlify, you usually only need `DATABASE_URL` and `NEXT_PUBLIC_SITE_URL`. The other public storefront values already have safe in-code defaults unless you intentionally want to override them.
 
 ## Project Structure
 ```txt
