@@ -1,6 +1,7 @@
 # Netlify Deploy Guide
 
 This project already includes a GitHub Actions workflow at `.github/workflows/netlify-deploy.yml`.
+The repo also pins Node for Netlify with `netlify.toml`, `.nvmrc`, and `package.json`.
 
 Recommended setup:
 
@@ -27,6 +28,7 @@ Build command: npm run build
 ```
 
 For Next.js on Netlify, framework detection should handle the rest. Do not expose server secrets in public client variables.
+This repo pins Netlify to Node `20`, which matches the current project runtime and avoids Node 22 build mismatches.
 
 ## 2. Add Environment Variables in Netlify
 
@@ -130,6 +132,7 @@ Usually one of these:
 - missing `DATABASE_URL`
 - incorrect public env vars
 - branch mismatch between workflow and Netlify hook
+- stale build cache after a Node version change
 
 ### Deploy does not run on push
 
@@ -138,6 +141,16 @@ Check:
 - branch is really `main`
 - GitHub Actions is enabled
 - the workflow file exists at `.github/workflows/netlify-deploy.yml`
+
+### Netlify is using the wrong Node version
+
+This repo pins Node in three places:
+
+- `.nvmrc`
+- `package.json` `engines.node`
+- `netlify.toml`
+
+If Netlify still shows Node 22 in logs, clear the Netlify build cache and redeploy once so the new runtime is picked up.
 
 ## Optional Next Step
 
