@@ -20,3 +20,11 @@ Update docs and checklists if behavior changes.
 Refactor the storefront to improve structure without changing user-visible behavior.
 Keep the cart, invoice, QR, Telegram, and share flows intact.
 Prefer smaller files, pure helpers, and reusable components.
+
+## Specialist Agents
+
+Reusable agent prompts live in `agents/`.
+
+- `agents/invoice-share-qa-agent.md`: invoice sharing, PNG export, QR, and Telegram checkout QA
+- `agents/layout-audit-agent.md`: responsive layout and invoice panel audit
+- `agents/feature-best-practice-agent.md`: code review for cart/invoice/share architecture and maintainability

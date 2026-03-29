@@ -1,18 +1,25 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronUp, QrCode, ReceiptText, Trash2 } from "lucide-react";
+import { ChevronUp, ReceiptText, ScrollText, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import QRCode from "react-qr-code";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { InvoiceQr } from "@/components/cart/invoice-qr";
 import { ShareInvoiceActions } from "@/components/cart/share-invoice-actions";
 import { useLocale } from "@/components/locale/locale-provider";
 import { TELEGRAM_CHECKOUT_URL } from "@/lib/constants";
 import { formatCurrency } from "@/lib/currency";
-import { formatItemCount, getUiText } from "@/lib/i18n";
+import {
+  formatItemCount,
+  getInvoiceItemTitle,
+  getUiText,
+} from "@/lib/i18n";
 import { buildInvoice, getCartCount } from "@/lib/invoice";
-import { formatInvoiceTimestamp } from "@/lib/invoice-text";
+import { formatInvoiceText, formatInvoiceTimestamp } from "@/lib/invoice-text";
 import type { Locale } from "@/lib/locale";
+import { encodeInvoiceQr } from "@/lib/qr";
+import { getTelegramTargetLabel } from "@/lib/telegram";
 import { useCartStore } from "@/store/cart-store";
 import type { CartItem } from "@/types/cart";
 import type { Invoice } from "@/types/invoice";
@@ -28,6 +35,386 @@ interface InvoiceCardProps {
   clearCart: () => void;
   locale: Locale;
   stickyActions?: boolean;
+}
+
+interface InvoicePaperPreviewProps {
+  invoice: Invoice;
+  locale: Locale;
+}
+
+interface InvoicePaperDocumentProps {
+  id?: string;
+  invoice: Invoice;
+  locale: Locale;
+  className?: string;
+  variant?: "preview" | "export";
+}
+
+function InvoicePaperDocument({
+  id,
+  invoice,
+  locale,
+  className,
+  variant = "preview",
+}: InvoicePaperDocumentProps) {
+  const ui = getUiText(locale);
+  const copy = ui.invoice;
+  const cartCopy = ui.cart;
+  const targetLabel = getTelegramTargetLabel(invoice.telegramUrl);
+  const isExport = variant === "export";
+
+  if (isExport) {
+    const qrPayload = encodeInvoiceQr(invoice);
+
+    return (
+      <div
+        id={id}
+        className={`rounded-[2rem] border border-neutral-200 bg-white p-7 text-neutral-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)] ${className ?? ""}`}
+      >
+        <div className="border-b border-neutral-200 pb-5">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-lime-700">
+            {invoice.shop}
+          </p>
+
+          <div className="mt-4 flex items-start justify-between gap-4">
+            <div>
+              <h4 className="text-[2.25rem] font-bold tracking-tight text-neutral-950">
+                {copy.invoice}
+              </h4>
+              <p className="mt-2 text-sm text-neutral-500">{copy.orderSummary}</p>
+            </div>
+
+            <div className="text-right">
+              <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                {copy.total}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-neutral-950">
+                {formatCurrency(invoice.total)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start justify-between gap-4">
+              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                {copy.invoiceId}
+              </span>
+              <span className="max-w-[420px] text-right font-semibold text-neutral-950">
+                {invoice.invoiceId}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                {copy.created}
+              </span>
+              <span className="text-right font-medium text-neutral-950">
+                {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                {copy.checkoutTarget}
+              </span>
+              <span className="text-right font-semibold text-neutral-950">{targetLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+          <div className="flex items-center justify-between border-b border-neutral-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+            <span>{copy.items}</span>
+            <span>{cartCopy.qtyShort}</span>
+          </div>
+
+          <div className="divide-y divide-neutral-200">
+            {invoice.items.map((item) => (
+              <div key={item.id} className="flex items-start justify-between gap-4 py-4">
+                <div>
+                  <p className="text-base font-semibold text-neutral-950">
+                    {getInvoiceItemTitle(item, locale)}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {item.qty} x {formatCurrency(item.price)}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-400">{item.id}</p>
+                </div>
+
+                <div className="text-right text-sm font-semibold text-neutral-950">
+                  {formatCurrency(item.lineTotal)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+          <div className="flex items-center justify-between text-sm text-neutral-500">
+            <span>{copy.subtotal}</span>
+            <span>{formatCurrency(invoice.subtotal)}</span>
+          </div>
+          <div className="mt-3 flex items-center justify-between text-lg font-bold text-neutral-950">
+            <span>{copy.total}</span>
+            <span>{formatCurrency(invoice.total)}</span>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-5">
+          <div className="flex flex-col items-center text-center">
+            <div className="rounded-[1.25rem] border border-neutral-200 bg-white p-4">
+              <QRCode value={qrPayload} size={150} />
+            </div>
+
+            <p className="mt-4 text-sm font-semibold text-neutral-950">{copy.scanOrShare}</p>
+            <p className="mt-2 text-xs text-neutral-500">
+              {invoice.currency} {invoice.total.toFixed(2)}
+            </p>
+            <p className="mt-3 max-w-[420px] break-all text-xs text-neutral-400">
+              {invoice.invoiceId}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 text-xs text-neutral-500">
+          {copy.telegram}: {targetLabel}
+        </div>
+      </div>
+    );
+  }
+
+  const detailsGridClassName = "mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]";
+  const itemHeaderClassName =
+    "hidden grid-cols-[minmax(0,1fr)_72px_140px_140px] items-center gap-3 border-b border-neutral-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500 sm:grid";
+  const itemRowClassName =
+    "grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_72px_140px_140px] sm:items-center";
+
+  return (
+    <div
+      id={id}
+      className={`rounded-[2rem] border border-neutral-200 bg-white p-5 text-neutral-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)] sm:p-6 ${className ?? ""}`}
+    >
+      <div className="flex flex-col gap-5 border-b border-neutral-200 pb-5 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-lime-700">
+            {invoice.shop}
+          </p>
+          <h4 className="mt-2 text-2xl font-bold tracking-tight text-neutral-950 md:text-3xl">
+            {copy.invoice}
+          </h4>
+          <p className="mt-1 text-sm text-neutral-500">{copy.orderSummary}</p>
+        </div>
+
+        <div className="grid gap-3 text-sm text-neutral-600 md:min-w-[260px] md:text-right">
+          <div>
+            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+              {copy.invoiceId}
+            </p>
+            <p className="mt-1 font-semibold text-neutral-950">{invoice.invoiceId}</p>
+          </div>
+
+          <div>
+            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+              {copy.created}
+            </p>
+            <p className="mt-1 font-medium text-neutral-950">
+              {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className={detailsGridClassName}>
+        <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+          <div className={itemHeaderClassName}>
+            <span>{copy.items}</span>
+            <span className="text-center">{cartCopy.qtyShort}</span>
+            <span className="text-right">{copy.unitPrice}</span>
+            <span className="text-right">{copy.lineTotal}</span>
+          </div>
+
+          <div className="divide-y divide-neutral-200">
+            {invoice.items.map((item) => (
+              <div key={item.id} className={itemRowClassName}>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-950 md:text-base">
+                    {getInvoiceItemTitle(item, locale)}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">{item.id}</p>
+                </div>
+
+                <div className="flex items-center justify-between text-sm font-medium text-neutral-700 sm:block sm:text-center">
+                  <span
+                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
+                  >
+                    {cartCopy.qtyShort}
+                  </span>
+                  <span>{item.qty}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm font-medium text-neutral-700 sm:block sm:text-right">
+                  <span
+                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
+                  >
+                    {copy.unitPrice}
+                  </span>
+                  <span>{formatCurrency(item.price)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm font-semibold text-neutral-950 sm:block sm:text-right">
+                  <span
+                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
+                  >
+                    {copy.lineTotal}
+                  </span>
+                  <span>{formatCurrency(item.lineTotal)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              {copy.checkoutTarget}
+            </p>
+            <p className="mt-1 text-base font-semibold text-neutral-950">{targetLabel}</p>
+            <p className="mt-2 text-sm text-neutral-500">{copy.telegram}</p>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+            <div className="flex items-center justify-between text-sm text-neutral-600">
+              <span>{copy.subtotal}</span>
+              <span>{formatCurrency(invoice.subtotal)}</span>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-lg font-bold text-neutral-950">
+              <span>{copy.total}</span>
+              <span>{formatCurrency(invoice.total)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+        <InvoiceQr invoice={invoice} layout="responsive" />
+      </div>
+    </div>
+  );
+}
+
+function InvoicePaperPreview({ invoice, locale }: InvoicePaperPreviewProps) {
+  const copy = getUiText(locale).invoice;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="locale-label text-xs font-semibold uppercase text-app-primary">
+            {copy.imageInvoice}
+          </p>
+          <p className="mt-1 text-sm text-app-text-muted">
+            {copy.imageInvoiceDescription}
+          </p>
+        </div>
+
+        <div className="rounded-full border border-app-border bg-app-surface-2 px-4 py-2 text-sm font-semibold text-app-text">
+          {copy.total}: {formatCurrency(invoice.total)}
+        </div>
+      </div>
+
+      <InvoicePaperDocument invoice={invoice} locale={locale} />
+    </div>
+  );
+}
+
+function TextInvoicePreview({
+  invoice,
+  locale,
+}: {
+  invoice: Invoice;
+  locale: Locale;
+}) {
+  const copy = getUiText(locale).invoice;
+  const invoiceText = useMemo(() => formatInvoiceText(invoice, locale), [invoice, locale]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 rounded-full border border-app-border bg-app-surface-2 p-2 text-app-primary">
+          <ScrollText className="size-4" />
+        </div>
+        <div>
+          <p className="locale-label text-xs font-semibold uppercase text-app-primary">
+            {copy.textInvoice}
+          </p>
+          <p className="mt-1 text-sm text-app-text-muted">
+            {copy.textInvoiceDescription}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-[1.5rem] border border-app-border bg-app-surface-2 p-4">
+        <pre className="eco-scrollbar max-h-[240px] overflow-auto whitespace-pre-wrap font-mono text-xs leading-6 text-app-text-soft sm:text-[13px]">
+          {invoiceText}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+function EditableItemsSection({
+  items,
+  locale,
+  updateQty,
+  removeItem,
+}: {
+  items: CartItem[];
+  locale: Locale;
+  updateQty: (id: string, qty: number) => void;
+  removeItem: (id: string) => void;
+}) {
+  const copy = getUiText(locale).invoice;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="locale-label text-xs font-semibold uppercase text-app-primary">
+          {copy.adjustItems}
+        </p>
+        <p className="mt-1 text-sm text-app-text-muted">
+          {copy.adjustItemsDescription}
+        </p>
+      </div>
+
+      <motion.ul
+        layout
+        className="eco-scrollbar max-h-[320px] space-y-3 overflow-auto pr-1 xl:max-h-[360px]"
+      >
+        <AnimatePresence initial={false}>
+          {items.map((item) => (
+            <motion.li
+              key={item.id}
+              layout
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CartItemRow
+                item={item}
+                onIncrease={() => updateQty(item.id, item.qty + 1)}
+                onDecrease={() => updateQty(item.id, item.qty - 1)}
+                onRemove={() => removeItem(item.id)}
+              />
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </motion.ul>
+    </div>
+  );
 }
 
 function InvoiceCard({
@@ -47,7 +434,7 @@ function InvoiceCard({
 
   if (!hasHydrated) {
     return (
-      <div className="rounded-[28px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
+      <div className="rounded-[32px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
@@ -55,20 +442,20 @@ function InvoiceCard({
               <div className="h-8 w-52 animate-pulse rounded-full bg-app-surface-3" />
               <div className="h-4 w-64 animate-pulse rounded-full bg-app-surface-3" />
             </div>
-            <div className="h-16 w-20 animate-pulse rounded-[1rem] bg-app-surface-3" />
+            <div className="h-16 w-28 animate-pulse rounded-[1rem] bg-app-surface-3" />
           </div>
-          <div className="h-24 animate-pulse rounded-[1.25rem] bg-app-surface-2" />
-          <div className="h-72 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
-          <div className="h-28 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
+          <div className="h-80 animate-pulse rounded-[1.75rem] bg-app-surface-2" />
+          <div className="h-44 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
+          <div className="h-40 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-[28px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
-      <div id={exportTargetId} className="space-y-5">
-        <div className="flex items-start justify-between gap-4">
+    <div className="rounded-[32px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
+      <div className="space-y-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="locale-label text-xs font-semibold uppercase text-app-primary">
               {copy.invoice}
@@ -76,102 +463,64 @@ function InvoiceCard({
             <h3 className="mt-1 text-2xl font-bold text-app-text xl:text-3xl">
               {copy.orderSummary}
             </h3>
-            <p className="mt-1 text-sm text-app-text-muted">
+            <p className="mt-1 max-w-xl text-sm text-app-text-muted">
               {copy.reviewDescription}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3 text-right">
-            <div className="locale-label text-[11px] font-medium uppercase text-app-text-faint">
-              {copy.items}
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[220px]">
+            <div className="rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3">
+              <div className="locale-label text-[11px] font-medium uppercase text-app-text-faint">
+                {copy.items}
+              </div>
+              <div className="mt-1 text-xl font-bold text-app-text">{totalCount}</div>
             </div>
-            <div className="mt-1 text-2xl font-bold text-app-text">{totalCount}</div>
-          </div>
-        </div>
 
-        <div className="rounded-2xl border border-app-border bg-app-surface-2 p-4">
-          <div className="flex items-center justify-between gap-3 text-sm text-app-text-soft">
-            <span className="inline-flex items-center gap-2">
-              <ReceiptText className="h-4 w-4 text-app-primary" />
-              {copy.invoiceId}
-            </span>
-            <span className="locale-nowrap text-right font-medium text-app-text">
-              {invoice?.invoiceId ?? copy.pending}
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-3 text-sm text-app-text-soft">
-            <span className="inline-flex items-center gap-2">
-              <QrCode className="h-4 w-4 text-app-primary" />
-              {copy.created}
-            </span>
-            <span className="text-right font-medium text-app-text">
-              {invoice
-                ? formatInvoiceTimestamp(invoice.createdAtIso, locale)
-                : copy.addItemsToGenerate}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="locale-label flex items-center justify-between text-xs font-semibold uppercase text-app-text-faint">
-            <span>{copy.items}</span>
-            <span>{invoice?.currency ?? "USD"}</span>
-          </div>
-
-          {hasItems ? (
-            <motion.ul
-              layout
-              className="eco-scrollbar max-h-[320px] space-y-3 overflow-auto pr-1 xl:max-h-[360px]"
-            >
-              <AnimatePresence initial={false}>
-                {items.map((item) => (
-                  <motion.li
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                  >
-                    <CartItemRow
-                      item={item}
-                      onIncrease={() => updateQty(item.id, item.qty + 1)}
-                      onDecrease={() => updateQty(item.id, item.qty - 1)}
-                      onRemove={() => removeItem(item.id)}
-                    />
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </motion.ul>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-app-border bg-app-bg-soft px-4 py-7 text-center">
-              <p className="text-sm font-medium text-app-text">{copy.emptyTitle}</p>
-              <p className="mt-1 text-sm text-app-text-muted">
-                {copy.emptyDescription}
-              </p>
+            <div className="rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3">
+              <div className="locale-label text-[11px] font-medium uppercase text-app-text-faint">
+                {copy.total}
+              </div>
+              <div className="mt-1 text-xl font-bold text-app-text">
+                {formatCurrency(invoice?.total ?? 0)}
+              </div>
             </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-app-border bg-app-surface-2 p-4">
-          <div className="flex items-center justify-between text-sm text-app-text-soft">
-            <span>{copy.subtotal}</span>
-            <span>{formatCurrency(invoice?.subtotal ?? 0)}</span>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between text-lg font-bold text-app-text xl:text-xl">
-            <span>{copy.total}</span>
-            <span>{formatCurrency(invoice?.total ?? 0)}</span>
           </div>
         </div>
 
         {hasItems && invoice ? (
-          <div className="rounded-2xl border border-app-qr-border bg-app-qr p-4 text-app-qr-text">
-            <InvoiceQr invoice={invoice} />
-          </div>
+          <>
+            <div className="pointer-events-none fixed left-[-200vw] top-0 z-[-1] opacity-100" aria-hidden="true">
+              <InvoicePaperDocument
+                id={exportTargetId}
+                invoice={invoice}
+                locale={locale}
+                className="w-[820px]"
+                variant="export"
+              />
+            </div>
+            <InvoicePaperPreview
+              invoice={invoice}
+              locale={locale}
+            />
+            <TextInvoicePreview invoice={invoice} locale={locale} />
+            <EditableItemsSection
+              items={items}
+              locale={locale}
+              updateQty={updateQty}
+              removeItem={removeItem}
+            />
+          </>
         ) : (
-          <div className="rounded-2xl border border-dashed border-app-border bg-app-bg-soft p-4 text-sm text-app-text-muted">
-            {copy.qrHint}
+          <div className="rounded-[1.75rem] border border-dashed border-app-border bg-app-bg-soft px-5 py-10 text-center">
+            <div className="mx-auto flex max-w-md flex-col items-center">
+              <div className="rounded-full border border-app-border bg-app-surface-2 p-3 text-app-primary">
+                <ReceiptText className="size-5" />
+              </div>
+              <p className="mt-4 text-lg font-semibold text-app-text">{copy.emptyTitle}</p>
+              <p className="mt-2 text-sm leading-6 text-app-text-muted">
+                {copy.emptyDescription}
+              </p>
+            </div>
           </div>
         )}
       </div>

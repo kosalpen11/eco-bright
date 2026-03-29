@@ -107,7 +107,7 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
 
   return (
     <section id="store" className="relative pb-32 pt-10 lg:pb-16">
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px] lg:px-8">
+      <div className="mx-auto grid max-w-[1500px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_560px] xl:grid-cols-[minmax(0,1fr)_620px] lg:px-8">
         <div className="space-y-6">
           <div className="space-y-4" id="store-controls">
             <ProductSearch
@@ -211,7 +211,7 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
           />
         </div>
 
-        <aside id="invoice" className="lg:sticky lg:top-24 lg:h-fit">
+        <aside id="invoice" className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-auto">
           <InvoicePanel />
         </aside>
       </div>

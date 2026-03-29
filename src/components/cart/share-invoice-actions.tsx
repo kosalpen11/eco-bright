@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy, ImageUp, MessageCircle, Share2 } from "lucide-react";
-import { getFontEmbedCSS, toPng } from "html-to-image";
+import { getFontEmbedCSS, toBlob, toPng } from "html-to-image";
 import { useMemo, useState } from "react";
 import { useLocale } from "@/components/locale/locale-provider";
 import { formatInvoiceText } from "@/lib/invoice-text";
@@ -27,7 +27,22 @@ function downloadDataUrl(filename: string, dataUrl: string) {
   const link = document.createElement("a");
   link.href = dataUrl;
   link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
   link.click();
+  link.remove();
+}
+
+function downloadBlob(filename: string, blob: Blob) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 async function getSafeFontEmbedCss(node: HTMLElement, locale: string) {
@@ -120,38 +135,64 @@ export function ShareInvoiceActions({
       }
 
       const backgroundColor = window.getComputedStyle(node).backgroundColor;
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
+
       const exportOptions = {
         backgroundColor,
         cacheBust: true,
-        pixelRatio: 2,
+        pixelRatio: 1.6,
         preferredFontFormat: "woff2" as const,
       };
       const fontEmbedCSS = await getSafeFontEmbedCss(node, locale);
 
-      let dataUrl: string;
-
       try {
-        dataUrl = await toPng(node, {
+        const blob = await toBlob(node, {
           ...exportOptions,
           ...(fontEmbedCSS ? { fontEmbedCSS } : {}),
         });
+
+        if (!blob) {
+          throw new Error("Export returned an empty blob");
+        }
+
+        downloadBlob(`${invoice.invoiceId}.png`, blob);
+        setFeedback(copy.invoiceImageExported());
+        return;
       } catch (error) {
         const shouldRetryWithoutFonts =
           (error instanceof DOMException && error.name === "SecurityError") ||
           (error instanceof Error && error.message.includes("cssRules"));
 
         if (!shouldRetryWithoutFonts) {
-          throw error;
+          const dataUrl = await toPng(node, {
+            ...exportOptions,
+            ...(fontEmbedCSS ? { fontEmbedCSS } : {}),
+          });
+          downloadDataUrl(`${invoice.invoiceId}.png`, dataUrl);
+          setFeedback(copy.invoiceImageExported());
+          return;
         }
 
-        dataUrl = await toPng(node, {
+        const blob = await toBlob(node, {
           ...exportOptions,
           skipFonts: true,
         });
-      }
 
-      downloadDataUrl(`${invoice.invoiceId}.png`, dataUrl);
-      setFeedback(copy.invoiceImageExported());
+        if (blob) {
+          downloadBlob(`${invoice.invoiceId}.png`, blob);
+        } else {
+          const dataUrl = await toPng(node, {
+            ...exportOptions,
+            skipFonts: true,
+          });
+          downloadDataUrl(`${invoice.invoiceId}.png`, dataUrl);
+        }
+
+        setFeedback(copy.invoiceImageExported());
+        return;
+      }
     } catch {
       setFeedback(copy.imageExportFailed);
     }
