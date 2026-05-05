@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { readCartStorage, writeCartStorage } from "@/lib/cart-storage";
 import { createInvoiceMeta } from "@/lib/invoice";
 import type { CartItem, CartSnapshot } from "@/types/cart";
+import type { OrderSource } from "@/types/order";
 import type { Product } from "@/types/product";
 
 interface CartState extends CartSnapshot {
@@ -12,6 +13,8 @@ interface CartState extends CartSnapshot {
   addItem: (product: Product) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
+  setOrderSource: (source: OrderSource) => void;
+  refreshInvoiceSession: (nextSource?: OrderSource) => void;
   clearCart: () => void;
   resetInvoice: () => void;
 }
@@ -21,6 +24,7 @@ function toCartItem(product: Product): CartItem {
     id: product.id,
     title: product.title,
     titleKm: product.titleKm,
+    category: product.category,
     categoryLabel: product.categoryLabel,
     categoryLabelKm: product.categoryLabelKm,
     imageUrl: product.imageUrl,
@@ -39,6 +43,7 @@ export const selectCartCount = (state: Pick<CartState, "items">) =>
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   invoiceMeta: null,
+  orderSource: "web",
   hasHydrated: false,
   hydrate: () => {
     if (get().hasHydrated) {
@@ -53,6 +58,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         snapshot.items.length > 0
           ? snapshot.invoiceMeta ?? createInvoiceMeta()
           : null,
+      orderSource: snapshot.orderSource ?? "web",
       hasHydrated: true,
     });
   },
@@ -75,22 +81,24 @@ export const useCartStore = create<CartState>((set, get) => ({
           )
         : [...state.items, toCartItem(product)];
 
-      persist({ items: nextItems, invoiceMeta: nextMeta });
+      persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
       return {
         items: nextItems,
         invoiceMeta: nextMeta,
+        orderSource: state.orderSource,
       };
     }),
   removeItem: (id) =>
     set((state) => {
       const nextItems = state.items.filter((item) => item.id !== id);
       const nextMeta = nextItems.length ? state.invoiceMeta ?? createInvoiceMeta() : null;
-      persist({ items: nextItems, invoiceMeta: nextMeta });
+      persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
       return {
         items: nextItems,
         invoiceMeta: nextMeta,
+        orderSource: state.orderSource,
       };
     }),
   updateQty: (id, qty) =>
@@ -100,20 +108,41 @@ export const useCartStore = create<CartState>((set, get) => ({
           ? state.items.filter((item) => item.id !== id)
           : state.items.map((item) => (item.id === id ? { ...item, qty } : item));
       const nextMeta = nextItems.length ? state.invoiceMeta ?? createInvoiceMeta() : null;
-      persist({ items: nextItems, invoiceMeta: nextMeta });
+      persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
       return {
         items: nextItems,
         invoiceMeta: nextMeta,
+        orderSource: state.orderSource,
       };
     }),
+  setOrderSource: (source) =>
+    set((state) => {
+      const next = {
+        items: state.items,
+        invoiceMeta: state.invoiceMeta,
+        orderSource: source,
+      };
+      persist(next);
+      return next;
+    }),
+  refreshInvoiceSession: (nextSource = "web") =>
+    set((state) => {
+      const next = {
+        items: state.items,
+        invoiceMeta: state.items.length ? createInvoiceMeta() : null,
+        orderSource: nextSource,
+      };
+      persist(next);
+      return next;
+    }),
   clearCart: () => {
-    const next = { items: [], invoiceMeta: null };
+    const next = { items: [], invoiceMeta: null, orderSource: "web" as const };
     persist(next);
     set(next);
   },
   resetInvoice: () => {
-    const next = { items: [], invoiceMeta: null };
+    const next = { items: [], invoiceMeta: null, orderSource: "web" as const };
     persist(next);
     set(next);
   },

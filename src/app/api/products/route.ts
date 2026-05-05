@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
-import { getActiveProducts } from "@/db/queries/products";
+import { getStorefrontProducts } from "@/lib/products";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const products = await getActiveProducts();
+    const result = await getStorefrontProducts();
 
     return NextResponse.json({
       ok: true,
-      count: products.length,
-      products,
+      count: result.products.length,
+      products: result.products,
+      source: result.isFallback ? "fallback" : "neon",
+      message: result.catalogError,
     });
   } catch (error) {
     console.error("GET /api/products failed", error);

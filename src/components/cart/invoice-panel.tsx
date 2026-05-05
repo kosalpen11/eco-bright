@@ -3,18 +3,27 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
+  ChevronDown,
   ChevronLeft,
   ChevronUp,
   ReceiptText,
   ScrollText,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "react-qr-code";
 import { InvoiceQr } from "@/components/cart/invoice-qr";
+import { OrderButton } from "@/components/cart/order-button";
 import { ShareInvoiceActions } from "@/components/cart/share-invoice-actions";
+import { CheckoutForm } from "@/components/cart/checkout-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useLocale } from "@/components/locale/locale-provider";
 import { TELEGRAM_CHECKOUT_URL } from "@/lib/constants";
+import {
+  readCheckoutFormStorage,
+  writeCheckoutFormStorage,
+} from "@/lib/cart-storage";
 import { formatCurrency } from "@/lib/currency";
 import {
   formatItemCount,
@@ -25,9 +34,10 @@ import { buildInvoice, getCartCount } from "@/lib/invoice";
 import { formatInvoiceText, formatInvoiceTimestamp } from "@/lib/invoice-text";
 import type { Locale } from "@/lib/locale";
 import { encodeInvoiceQr } from "@/lib/qr";
-import { getTelegramTargetLabel } from "@/lib/telegram";
+import { getTelegramTargetLabel } from "@/lib/telegram-order";
 import { useCartStore } from "@/store/cart-store";
 import type { Invoice } from "@/types/invoice";
+import type { OrderSource } from "@/types/order";
 
 interface InvoiceCardProps {
   exportTargetId: string;
@@ -37,6 +47,15 @@ interface InvoiceCardProps {
   clearCart: () => void;
   locale: Locale;
   reviewOpen: boolean;
+  orderSource: OrderSource;
+  customerName: string;
+  customerPhone: string;
+  note: string;
+  fulfillmentMethod: "pickup" | "delivery" | "";
+  onCustomerNameChange: (value: string) => void;
+  onCustomerPhoneChange: (value: string) => void;
+  onNoteChange: (value: string) => void;
+  onFulfillmentMethodChange: (value: "pickup" | "delivery") => void;
   onOpenReview: () => void;
   onBackToAdjustItems: () => void;
   stickyActions?: boolean;
@@ -379,12 +398,23 @@ function InvoiceCard({
   clearCart,
   locale,
   reviewOpen,
+  orderSource,
+  customerName,
+  customerPhone,
+  note,
+  fulfillmentMethod,
+  onCustomerNameChange,
+  onCustomerPhoneChange,
+  onNoteChange,
+  onFulfillmentMethodChange,
   onOpenReview,
   onBackToAdjustItems,
   stickyActions = false,
 }: InvoiceCardProps) {
   const copy = getUiText(locale).invoice;
+  const orderingCopy = getUiText(locale).ordering;
   const hasItems = Boolean(invoice && invoice.items.length > 0);
+  const [textInvoiceOpen, setTextInvoiceOpen] = useState(false);
 
   if (!hasHydrated) {
     return (
@@ -455,6 +485,33 @@ function InvoiceCard({
 
             {reviewOpen ? (
               <>
+                {/* Step indicator */}
+                <div className="flex items-center gap-0">
+                  {[
+                    { label: copy.checkoutStep1, step: 1 },
+                    { label: copy.checkoutStep2, step: 2 },
+                    { label: copy.checkoutStep3, step: 3 },
+                  ].map(({ label, step }, index) => (
+                    <div key={step} className="flex items-center">
+                      <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                        step === 2
+                          ? "bg-app-primary text-app-bg"
+                          : "text-app-text-faint"
+                      }`}>
+                        <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold ${
+                          step === 2 ? "bg-white/20 text-white" : "bg-app-surface-3 text-app-text-faint"
+                        }`}>
+                          {step}
+                        </span>
+                        {label}
+                      </div>
+                      {index < 2 && (
+                        <div className="mx-1 h-px w-4 bg-app-border" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
                 <button
                   type="button"
                   onClick={onBackToAdjustItems}
@@ -464,11 +521,41 @@ function InvoiceCard({
                   {copy.backToAdjustItems}
                 </button>
 
+                <CheckoutForm
+                  customerName={customerName}
+                  customerPhone={customerPhone}
+                  note={note}
+                  fulfillmentMethod={fulfillmentMethod}
+                  onCustomerNameChange={onCustomerNameChange}
+                  onCustomerPhoneChange={onCustomerPhoneChange}
+                  onNoteChange={onNoteChange}
+                  onFulfillmentMethodChange={onFulfillmentMethodChange}
+                />
+
                 <InvoicePaperPreview
                   invoice={invoice}
                   locale={locale}
                 />
-                <TextInvoicePreview invoice={invoice} locale={locale} />
+
+                {/* Collapsible text invoice */}
+                <div className="rounded-[1.5rem] border border-app-border bg-app-surface-2 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setTextInvoiceOpen((v) => !v)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-app-text-muted hover:text-app-text transition"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ScrollText className="size-4" />
+                      {copy.textInvoice}
+                    </span>
+                    <ChevronDown className={`size-4 transition-transform ${textInvoiceOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {textInvoiceOpen && (
+                    <div className="border-t border-app-border">
+                      <TextInvoicePreview invoice={invoice} locale={locale} />
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="rounded-[1.75rem] border border-app-border bg-app-surface-2 p-5">
@@ -527,6 +614,16 @@ function InvoiceCard({
       >
         {reviewOpen ? (
           <>
+            <OrderButton
+              invoice={invoice}
+              source={orderSource}
+              customerName={customerName}
+              customerPhone={customerPhone}
+              note={note}
+              fulfillmentMethod={fulfillmentMethod}
+              className="mb-4"
+            />
+
             <ShareInvoiceActions
               invoice={invoice}
               disabled={!hasItems}
@@ -550,7 +647,7 @@ function InvoiceCard({
             disabled={!hasItems}
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-primary bg-app-primary px-4 py-3 text-sm font-semibold text-app-bg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {copy.confirmCheckout}
+            {orderingCopy.reviewOrder}
             <ArrowRight className="h-4 w-4" />
           </button>
         )}
@@ -564,15 +661,45 @@ export function InvoicePanel() {
   const copy = getUiText(locale).invoice;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [note, setNote] = useState("");
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<"pickup" | "delivery" | "">("");
+  const [hasLoadedStorage, setHasLoadedStorage] = useState(false);
   const items = useCartStore((state) => state.items);
   const invoiceMeta = useCartStore((state) => state.invoiceMeta);
+  const orderSource = useCartStore((state) => state.orderSource);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
   const clearCart = useCartStore((state) => state.clearCart);
+
+  // Load form state from localStorage on mount
+  useEffect(() => {
+    const stored = readCheckoutFormStorage();
+    setCustomerName(stored.customerName);
+    setCustomerPhone(stored.customerPhone);
+    setNote(stored.note);
+    setFulfillmentMethod(stored.fulfillmentMethod);
+    setHasLoadedStorage(true);
+  }, []);
+
+  // Persist form state to localStorage whenever it changes
+  useEffect(() => {
+    if (!hasLoadedStorage) {
+      return;
+    }
+    writeCheckoutFormStorage({
+      customerName,
+      customerPhone,
+      note,
+      fulfillmentMethod,
+    });
+  }, [customerName, customerPhone, note, fulfillmentMethod, hasLoadedStorage]);
 
   const invoice = useMemo(() => buildInvoice(items, invoiceMeta), [items, invoiceMeta]);
   const totalCount = getCartCount(items);
   const mobileTotal = formatCurrency(invoice?.total ?? 0);
   const reviewVisible = reviewOpen && items.length > 0;
+  const canSubmitOrder = Boolean(invoice && customerPhone.trim() && fulfillmentMethod);
 
   return (
     <>
@@ -585,6 +712,15 @@ export function InvoicePanel() {
           clearCart={clearCart}
           locale={locale}
           reviewOpen={reviewVisible}
+          orderSource={orderSource}
+          customerName={customerName}
+          customerPhone={customerPhone}
+          note={note}
+          fulfillmentMethod={fulfillmentMethod}
+          onCustomerNameChange={setCustomerName}
+          onCustomerPhoneChange={setCustomerPhone}
+          onNoteChange={setNote}
+          onFulfillmentMethodChange={setFulfillmentMethod}
           onOpenReview={() => setReviewOpen(true)}
           onBackToAdjustItems={() => setReviewOpen(false)}
         />
@@ -641,6 +777,15 @@ export function InvoicePanel() {
                   clearCart={clearCart}
                   locale={locale}
                   reviewOpen={reviewVisible}
+                  orderSource={orderSource}
+                  customerName={customerName}
+                  customerPhone={customerPhone}
+                  note={note}
+                  fulfillmentMethod={fulfillmentMethod}
+                  onCustomerNameChange={setCustomerName}
+                  onCustomerPhoneChange={setCustomerPhone}
+                  onNoteChange={setNote}
+                  onFulfillmentMethodChange={setFulfillmentMethod}
                   onOpenReview={() => setReviewOpen(true)}
                   onBackToAdjustItems={() => setReviewOpen(false)}
                   stickyActions

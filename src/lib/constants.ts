@@ -3,7 +3,8 @@ export const SHOP_NAME =
 export const SHOP_TAGLINE = "LED & solar that lasts";
 export const SHOP_DESCRIPTION =
   "Premium LED lighting and solar products with mobile-first browsing, local cart + invoice generation, QR handoff, and direct Telegram ordering.";
-const DEFAULT_TELEGRAM_PUBLIC_URL = "https://t.me/ecobrightledsolar";
+const DEFAULT_TELEGRAM_PUBLIC_URL = "https://t.me/eco_bright_sale_bot";
+const DEFAULT_TELEGRAM_OWNER_URL = "+85512710410";
 
 function normalizeTelegramBaseUrl(value: string) {
   const normalized = value.trim();
@@ -28,7 +29,16 @@ function normalizeTelegramBaseUrl(value: string) {
 }
 
 export const TELEGRAM_PUBLIC_URL = normalizeTelegramBaseUrl(
-  process.env.NEXT_PUBLIC_ORDER_TELEGRAM_URL?.trim() || DEFAULT_TELEGRAM_PUBLIC_URL,
+  process.env.NEXT_PUBLIC_TELEGRAM_URL?.trim() ||
+    process.env.NEXT_PUBLIC_ORDER_TELEGRAM_URL?.trim() ||
+    DEFAULT_TELEGRAM_PUBLIC_URL,
+);
+
+// Owner/support contact link (not necessarily the ordering bot).
+export const TELEGRAM_OWNER_URL = normalizeTelegramBaseUrl(
+  process.env.NEXT_PUBLIC_TELEGRAM_OWNER_URL?.trim() ||
+    DEFAULT_TELEGRAM_OWNER_URL ||
+    TELEGRAM_PUBLIC_URL,
 );
 export const TELEGRAM_CHECKOUT_URL = normalizeTelegramBaseUrl(
   process.env.NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL?.trim() || TELEGRAM_PUBLIC_URL,
@@ -48,4 +58,5 @@ export const MARQUEE_ITEMS = [
 
 export const STORAGE_KEYS = {
   cart: "eco-bright.cart.v1",
+  checkoutForm: "eco-bright.checkout-form.v1",
 } as const;

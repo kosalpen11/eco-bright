@@ -4,6 +4,8 @@ export interface InvoiceItemInput {
   id: string;
   title: string;
   titleKm?: string;
+  imageUrl?: string | null;
+  category?: string;
   price: number;
   qty: number;
 }

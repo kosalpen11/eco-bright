@@ -1,17 +1,12 @@
 "use client";
 
-import { Copy, ImageUp, MessageCircle, Share2 } from "lucide-react";
+import { Copy, ImageUp, Share2 } from "lucide-react";
 import { getFontEmbedCSS, toBlob, toPng } from "html-to-image";
 import { useMemo, useState } from "react";
 import { useLocale } from "@/components/locale/locale-provider";
 import { formatInvoiceText } from "@/lib/invoice-text";
 import { getUiText } from "@/lib/i18n";
 import { copyText, shareText } from "@/lib/share";
-import {
-  buildTelegramContactUrl,
-  formatTelegramOrderMessage,
-  getTelegramTargetLabel,
-} from "@/lib/telegram";
 import type { Invoice } from "@/types/invoice";
 
 interface ShareInvoiceActionsProps {
@@ -72,19 +67,6 @@ export function ShareInvoiceActions({
   const copy = getUiText(locale).invoice;
   const [feedback, setFeedback] = useState<string | null>(null);
   const text = useMemo(() => (invoice ? formatInvoiceText(invoice, locale) : ""), [invoice, locale]);
-  const telegramText = useMemo(
-    () => (invoice ? formatTelegramOrderMessage(invoice, locale) : ""),
-    [invoice, locale],
-  );
-  const telegramContactUrl = useMemo(
-    () =>
-      invoice ? buildTelegramContactUrl(invoice.telegramUrl, telegramText) : undefined,
-    [invoice, telegramText],
-  );
-  const telegramTargetLabel = useMemo(
-    () => (invoice ? getTelegramTargetLabel(invoice.telegramUrl) : ""),
-    [invoice],
-  );
 
   async function handleCopy() {
     if (!invoice) {
@@ -198,32 +180,9 @@ export function ShareInvoiceActions({
     }
   }
 
-  async function handleTelegram() {
-    if (!invoice || !telegramContactUrl) {
-      return;
-    }
-
-    try {
-      const copied = await copyText(telegramText);
-      window.open(telegramContactUrl, "_blank", "noopener,noreferrer");
-      setFeedback(
-        copied
-          ? copy.telegramOpened(telegramTargetLabel)
-          : copy.telegramOpenedWithoutCopy(telegramTargetLabel),
-      );
-    } catch {
-      try {
-        window.open(telegramContactUrl, "_blank", "noopener,noreferrer");
-        setFeedback(copy.telegramOpenedWithoutCopy(telegramTargetLabel));
-      } catch {
-        setFeedback(copy.telegramOpenFailed);
-      }
-    }
-  }
-
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <button
           type="button"
           onClick={handleCopy}
@@ -253,21 +212,9 @@ export function ShareInvoiceActions({
           <ImageUp className="h-4 w-4" />
           {copy.image}
         </button>
-
-        <button
-          type="button"
-          onClick={handleTelegram}
-          disabled={disabled || !telegramContactUrl}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-app-primary bg-app-primary-soft px-4 py-3 text-sm font-semibold text-app-primary transition hover:bg-app-surface-3 hover:text-app-text disabled:cursor-not-allowed disabled:border-app-border disabled:bg-app-surface-2 disabled:text-app-text-faint"
-        >
-          <MessageCircle className="h-4 w-4" />
-          {copy.telegram}
-        </button>
       </div>
 
-      <p className="mt-3 text-sm text-app-text-muted">
-        {feedback || (telegramTargetLabel ? copy.checkoutHint(telegramTargetLabel) : null)}
-      </p>
+      {feedback ? <p className="mt-3 text-sm text-app-text-muted">{feedback}</p> : null}
     </div>
   );
 }

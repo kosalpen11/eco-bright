@@ -1,9 +1,14 @@
 export {
-  buildTelegramContactUrl,
-  buildTelegramShareUrl,
+  buildTelegramUrl as buildTelegramChatUrl,
   extractTelegramPhone,
   extractTelegramUsername,
-  formatTelegramOrderMessage,
+  buildTelegramOrderMessage as formatTelegramOrderMessage,
   getTelegramTargetLabel,
-  getTelegramShareUrl,
-} from "@/lib/telegram/telegram";
+} from "@/lib/telegram-order";
+
+export {
+  buildTelegramBotUrl,
+  buildTelegramOrderHandoff as buildTelegramHandoffUrl,
+  buildTelegramStartPayload,
+  canUseTelegramStartPayload,
+} from "@/lib/telegram-order";

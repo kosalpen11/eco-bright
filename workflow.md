@@ -1,80 +1,73 @@
 # workflow.md
 
 ## Goal
-Build the storefront in phases so the app stays type-safe, modular, and easy to continue.
+Keep implementation modular, safe, and aligned to the live flow:
+- website creates order first
+- Neon is source of truth
+- Telegram is interaction layer
+- customer bot handles conversion
+- sales bot handles communication
+- admin bot handles operations
+- confirm is idempotent
+- sessions resume/cancel cleanly
+- admin actions enforce the state machine
 
 ## Branch Strategy
-- Use a feature branch with the `codex/` prefix
-- Keep each phase scoped
-- Prefer small commits over a large rewrite
+- Use a `codex/` feature branch
+- Keep one behavior area per change
+- Prefer small commits and documentation updates alongside code changes
 
 ## Implementation Order
-1. Scaffold app structure, types, and utilities
-2. Build layout and storefront UI
-3. Add search, filters, grouping, and sorting
-4. Implement cart state and persistence
-5. Implement invoice generation and invoice panel
-6. Add QR, copy/share, and Telegram actions
-7. Add Neon catalog and order endpoints
-8. Polish mobile UX, accessibility, and docs
+1. Update docs and memory files when flow or bot mapping changes
+2. Scaffold or refine shared types and utilities
+3. Implement or adjust web UX
+4. Keep invoice and order logic pure
+5. Wire order persistence and Telegram handoff
+6. Keep admin transitions behind shared services
+7. Add QA notes and close out docs
 
 ## Phase Checkpoints
-### Foundation
-- Next.js App Router exists
-- TypeScript is strict
-- Tailwind is configured
-- Shared types are defined
-- Neon product mapping is in place
+### Live Flow
+- Website order creation happens before Telegram handoff
+- Telegram handoff contains a stable order reference
+- Drafts restore safely
+- Confirm is idempotent
+- Admin actions reload the latest order before writing
 
-### UI
-- Navbar, hero, footer, and product card are reusable
-- Mobile layout is clean
-- Empty states look intentional
-
-### Browse
-- Search works by title, category, description, and tags
-- Filters and grouping are fast
-- Derived lists are memoized or derived safely
-
-### Cart
-- Add, increment, decrement, remove, and clear work
-- Cart survives refresh
-- Cart badge reflects item count
-
-### Invoice
-- Invoice matches the cart
-- Totals stay consistent
-- Invoice ID and timestamp are visible
-- Desktop rail feels substantial, not cramped
-- Mobile sheet keeps actions visible and QR below totals
-
-### QR and Share
-- QR updates live with cart changes
-- Copy and share work or fall back cleanly
-- Telegram order handoff works
+### Telegram
+- Customer bot menu is clear and short
+- Sales handoff stays separate from checkout logic
+- Pasted link flow is recoverable
+- Resume and cancel are explicit
+- Admin review is allowlisted
 
 ### Database
-- Product rows map into the shared `Product` model
-- Missing database config fails safely
-- Order route accepts valid invoice payloads only
+- Orders and order items persist in Neon
+- History rows are written for admin transitions
+- Deeplink payloads can expire
+- Session state survives interruptions
 
-### Polish
-- Responsive and accessible
-- No hydration issues
-- README and tracker are current
+### UX
+- Mobile is thumb-friendly
+- Desktop invoice rail is not cramped
+- Empty, loading, and error states are recoverable
+- Copy/share/open Telegram actions are clear
 
 ## QA Checklist
-- Products render
-- Search works
-- Filters work
-- Grouping works
-- Sorting works
-- Cart persists
-- Invoice totals are correct
-- QR data is valid
-- Copy and share work
-- Telegram CTA works
-- Desktop invoice rail width feels correct
-- Mobile invoice sheet opens cleanly
-- Database routes build without server/client boundary issues
-- Mobile layout does not overflow
+- Order created before Telegram handoff
+- Duplicate confirm does not duplicate side effects
+- Expired deeplink fails safely
+- Session resume and cancel work
+- Admin actions reject invalid transitions
+- Admin review reloads latest Neon state
+- Current bot mapping is reflected in docs
+- Role boundaries for customer, sales, and admin bots are reflected in docs
+- No doc references drift from live flow
+
+## Documentation Rule
+- If a flow, bot mapping, status rule, or handler changes, update:
+  - `Codex.md`
+  - `architecture.md`
+  - `workflow.md`
+  - `progress.md`
+  - `docs/telegram-bots/*`

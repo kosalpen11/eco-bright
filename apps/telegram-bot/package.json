@@ -1,0 +1,15 @@
+{
+  "name": "@eco-bright/telegram-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/customer-bot.ts",
+    "start": "tsx src/customer-bot.ts",
+    "customer:dev": "tsx watch src/customer-bot.ts",
+    "customer:start": "tsx src/customer-bot.ts",
+    "sales:dev": "tsx watch src/sales-bot.ts",
+    "sales:start": "tsx src/sales-bot.ts",
+    "admin:dev": "tsx watch src/admin-bot.ts",
+    "admin:start": "tsx src/admin-bot.ts"
+  }
+}

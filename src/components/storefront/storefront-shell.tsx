@@ -1,16 +1,14 @@
 "use client";
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { SearchX, SlidersHorizontal } from "lucide-react";
 import { CartAdjustPanel } from "@/components/cart/cart-adjust-panel";
 import { InvoicePanel } from "@/components/cart/invoice-panel";
 import { useLocale } from "@/components/locale/locale-provider";
 import { SectionHeader } from "@/components/common/section-header";
-import { ProductFilters } from "@/components/product/product-filters";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductSearch } from "@/components/product/product-search";
-import { ProductSort } from "@/components/product/product-sort";
-import { Button } from "@/components/ui/button";
+import { ProductToolbar } from "@/components/product/product-toolbar";
+import { PasteLinkForm } from "@/components/ordering/paste-link-form";
 import { groupProducts } from "@/lib/group-products";
 import { formatItemCount, getGroupModeLabel, getSortModeLabel, getUiText } from "@/lib/i18n";
 import { searchProducts } from "@/lib/search-products";
@@ -26,6 +24,7 @@ import type {
 interface StorefrontShellProps {
   products: Product[];
   catalogError?: string | null;
+  isFallbackCatalog?: boolean;
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -37,7 +36,11 @@ function isTypingTarget(target: EventTarget | null) {
   return tagName === "input" || tagName === "textarea" || target.isContentEditable;
 }
 
-export function StorefrontShell({ products, catalogError }: StorefrontShellProps) {
+export function StorefrontShell({
+  products,
+  catalogError,
+  isFallbackCatalog = false,
+}: StorefrontShellProps) {
   const { locale } = useLocale();
   const copy = getUiText(locale).storefront;
   const searchRef = useRef<HTMLInputElement>(null);
@@ -91,7 +94,6 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
   const sortLabel = getSortModeLabel(sortMode, locale);
   const normalizedQuery = query.trim();
   const isSearchActive = normalizedQuery.length > 0;
-  const shouldShowBrowseOptions = !isSearchActive || showSearchOptions;
   const stateMeta = isSearchActive
     ? copy.stateMetaQuery(normalizedQuery, groupLabel)
     : copy.stateMetaDefault(groupLabel, sortLabel);
@@ -108,7 +110,7 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
 
   return (
     <section id="store" className="relative pb-32 pt-10 lg:pb-16">
-      <div className="mx-auto grid max-w-[1500px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_560px] xl:grid-cols-[minmax(0,1fr)_620px] lg:px-8">
+      <div className="mx-auto grid max-w-[1640px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_560px] xl:grid-cols-[minmax(0,1fr)_620px] lg:px-8">
         <div className="space-y-6">
           <div className="space-y-4" id="store-controls">
             <ProductSearch
@@ -126,40 +128,18 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
               }
             />
 
-            {isSearchActive ? (
-              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-app-border bg-app-surface-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="locale-chip rounded-full border border-app-border bg-app-surface px-4 py-3 text-sm font-semibold uppercase text-app-text-muted">
-                  {stateMeta}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="surface"
-                    size="sm"
-                    onClick={() => setShowSearchOptions((current) => !current)}
-                  >
-                    <SlidersHorizontal className="size-4" />
-                    {showSearchOptions ? copy.hideOptions : copy.showOptions}
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={resetCatalogView}>
-                    <SearchX className="size-4" />
-                    {copy.clearSearch}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
             {catalogError ? (
               <div className="rounded-[1.5rem] border border-app-accent bg-app-accent-soft px-4 py-4 text-sm text-app-text-soft">
                 <p className="locale-label font-semibold uppercase text-app-accent">
-                  {copy.catalogSetupRequired}
+                  {isFallbackCatalog ? copy.catalogFallbackTitle : copy.catalogSetupRequired}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-app-text-soft">
-                  {catalogError} {copy.catalogSetupBody}
+                  {catalogError} {isFallbackCatalog ? copy.catalogFallbackBody : copy.catalogSetupBody}
                 </p>
               </div>
             ) : null}
+
+            <PasteLinkForm />
           </div>
 
           <SectionHeader
@@ -170,40 +150,31 @@ export function StorefrontShell({ products, catalogError }: StorefrontShellProps
             meta={`${formatItemCount(filteredProducts.length, locale)} / ${formatItemCount(products.length, locale)}`}
           />
 
-          <div className="space-y-4">
-            {shouldShowBrowseOptions ? (
-              <>
-                <ProductSort
-                  groupMode={groupMode}
-                  sortMode={sortMode}
-                  onGroupModeChange={(value) =>
-                    startUiTransition(() => {
-                      setGroupMode(value);
-                    })
-                  }
-                  onSortModeChange={(value) =>
-                    startUiTransition(() => {
-                      setSortMode(value);
-                    })
-                  }
-                />
-                <ProductFilters
-                  value={filter}
-                  onValueChange={(value) =>
-                    startUiTransition(() => {
-                      setFilter(value);
-                    })
-                  }
-                />
-              </>
-            ) : null}
-
-            {!isSearchActive || showSearchOptions ? (
-              <div className="locale-chip rounded-full border border-app-border bg-app-surface-2 px-4 py-3 text-sm font-semibold uppercase text-app-text-muted">
-                {stateMeta}
-              </div>
-            ) : null}
-          </div>
+          <ProductToolbar
+            filter={filter}
+            groupMode={groupMode}
+            sortMode={sortMode}
+            stateMeta={stateMeta}
+            isSearchActive={isSearchActive}
+            showSearchOptions={showSearchOptions}
+            onToggleSearchOptions={() => setShowSearchOptions((current) => !current)}
+            onResetCatalogView={resetCatalogView}
+            onFilterChange={(value) =>
+              startUiTransition(() => {
+                setFilter(value);
+              })
+            }
+            onGroupModeChange={(value) =>
+              startUiTransition(() => {
+                setGroupMode(value);
+              })
+            }
+            onSortModeChange={(value) =>
+              startUiTransition(() => {
+                setSortMode(value);
+              })
+            }
+          />
 
           <ProductGrid
             sections={groupedProducts}

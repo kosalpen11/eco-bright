@@ -2,20 +2,39 @@
   "name": "eco-bright-led-solar-storefront",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20.9 <21"
   },
   "scripts": {
     "dev": "next dev",
+    "bot:dev": "tsx apps/telegram-bot/src/bot.ts",
+    "bot:watch": "tsx watch apps/telegram-bot/src/bot.ts",
+    "bot:customer:dev": "tsx apps/telegram-bot/src/customer-bot.ts",
+    "bot:customer:watch": "tsx watch apps/telegram-bot/src/customer-bot.ts",
+    "bot:sales:dev": "tsx apps/telegram-bot/src/sales-bot.ts",
+    "bot:sales:watch": "tsx watch apps/telegram-bot/src/sales-bot.ts",
+    "bot:admin:dev": "tsx apps/telegram-bot/src/admin-bot.ts",
+    "bot:admin:watch": "tsx watch apps/telegram-bot/src/admin-bot.ts",
     "build": "next build",
+    "build:all": "turbo run build",
     "start": "next start",
     "lint": "eslint",
+    "lint:all": "turbo run lint",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "turbo run typecheck",
     "check": "npm run lint && npm run typecheck",
+    "test:catalog": "tsx --test src/lib/catalog/*.test.ts",
+    "test:orders": "tsx --test src/db/queries/*.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "seed:products": "tsx scripts/seed-products.ts",
-    "import:products:csv": "tsx scripts/import-products-from-csv.ts"
+    "import:products:csv": "tsx scripts/import-products-from-csv.ts",
+    "validate:products": "tsx scripts/validate-products.ts",
+    "report:products": "tsx scripts/export-review-report.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
@@ -25,6 +44,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.38.0",
+    "grammy": "^1.38.4",
     "html-to-image": "^1.11.13",
     "lucide-react": "^1.7.0",
     "next": "16.2.1",
@@ -33,6 +53,7 @@
     "react-qr-code": "^2.0.18",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.5.0",
+    "ws": "^8.20.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
@@ -41,12 +62,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
+    "turbo": "^2.9.0",
     "typescript": "^5"
   }
 }

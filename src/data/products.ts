@@ -80,8 +80,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_005",
     title: "Solar Flood Light 200W",
-    category: "flood-lights",
-    categoryLabel: "Flood Light",
+    category: "solar-flood-lights",
+    categoryLabel: "Solar Flood Light",
     useCase: "Outdoor Security",
     description:
       "High-power solar flood light with remote control, weather resistance, and dependable night coverage.",
@@ -97,8 +97,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_006",
     title: "Solar Flood Light 100W Motion",
-    category: "flood-lights",
-    categoryLabel: "Flood Light",
+    category: "solar-flood-lights",
+    categoryLabel: "Solar Flood Light",
     useCase: "Outdoor Security",
     description:
       "Motion-assisted flood light for gates, compounds, and driveways where flexible brightness saves battery.",
@@ -114,8 +114,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_007",
     title: "Solar Street Light 300W",
-    category: "street-lights",
-    categoryLabel: "Street Light",
+    category: "solar-street-lights",
+    categoryLabel: "Solar Street Light",
     useCase: "Road & Yard",
     description:
       "Integrated street light for roads, villas, compounds, and warehouse exteriors with broad spread.",
@@ -131,8 +131,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_008",
     title: "Split Solar Street Light 400W",
-    category: "street-lights",
-    categoryLabel: "Street Light",
+    category: "solar-street-lights",
+    categoryLabel: "Solar Street Light",
     useCase: "Project Install",
     description:
       "Split-body solar street light for larger compounds and municipal installs that need longer autonomy.",
@@ -148,8 +148,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_009",
     title: "Monocrystalline Solar Panel 550W",
-    category: "solar-panels",
-    categoryLabel: "Solar Panel",
+    category: "solar-systems",
+    categoryLabel: "Solar System",
     useCase: "Power Generation",
     description:
       "High-efficiency monocrystalline panel for dependable rooftop and project-scale energy generation.",
@@ -165,8 +165,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_010",
     title: "Hybrid Solar Panel Kit 200W",
-    category: "solar-panels",
-    categoryLabel: "Solar Panel Kit",
+    category: "solar-systems",
+    categoryLabel: "Solar System Kit",
     useCase: "Portable Backup",
     description:
       "Compact panel kit for cabin backup, mobile stalls, and smaller appliances that need fast deployment.",
@@ -182,8 +182,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_011",
     title: "LiFePO4 Solar Battery 100Ah",
-    category: "batteries",
-    categoryLabel: "Battery",
+    category: "solar-systems",
+    categoryLabel: "Solar Battery",
     useCase: "Backup Power",
     description:
       "Reliable LiFePO4 battery for solar backup systems with long cycle life and stable discharge.",
@@ -199,8 +199,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_012",
     title: "Deep Cycle Gel Battery 200Ah",
-    category: "batteries",
-    categoryLabel: "Battery",
+    category: "solar-systems",
+    categoryLabel: "Solar Battery",
     useCase: "Backup Power",
     description:
       "Large-capacity gel battery for heavier inverter systems and multi-load solar storage installations.",
@@ -216,8 +216,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_013",
     title: "MPPT Charge Controller 60A",
-    category: "accessories",
-    categoryLabel: "Accessory",
+    category: "drivers-accessories",
+    categoryLabel: "Driver / Accessory",
     useCase: "System Protection",
     description:
       "Smart MPPT controller with LCD status readout to manage panel input and battery charging efficiently.",
@@ -233,8 +233,8 @@ const productSeeds: ProductSeed[] = [
   {
     id: "prd_014",
     title: "Solar Garden Light Set",
-    category: "accessories",
-    categoryLabel: "Garden Light",
+    category: "decorative-lights",
+    categoryLabel: "Decorative Light",
     useCase: "Landscape",
     description:
       "Decorative solar light set for pathways, fences, cafes, and outdoor corners that need warm atmosphere.",
@@ -283,70 +283,70 @@ const productTranslations: Record<
   },
   prd_005: {
     titleKm: "ភ្លើងហ្វ្លដ៍សូឡា 200W",
-    categoryLabelKm: "ភ្លើងហ្វ្លដ៍",
+    categoryLabelKm: "ភ្លើងហ្វ្លដ៍សូឡា",
     useCaseKm: "សុវត្ថិភាពក្រៅអាគារ",
     descriptionKm:
       "ភ្លើងហ្វ្លដ៍សូឡាកម្លាំងខ្ពស់ មាន remote ធន់អាកាសធាតុ និងបំភ្លឺពេលយប់បានល្អ។",
   },
   prd_006: {
     titleKm: "ភ្លើងហ្វ្លដ៍សូឡា 100W មានចាប់ចលនា",
-    categoryLabelKm: "ភ្លើងហ្វ្លដ៍",
+    categoryLabelKm: "ភ្លើងហ្វ្លដ៍សូឡា",
     useCaseKm: "សុវត្ថិភាពក្រៅអាគារ",
     descriptionKm:
       "ភ្លើងហ្វ្លដ៍មានមុខងារចាប់ចលនា សម្រាប់ច្រកទ្វារ បរិវេណ និងផ្លូវចូលផ្ទះ។",
   },
   prd_007: {
     titleKm: "ភ្លើងផ្លូវសូឡា 300W",
-    categoryLabelKm: "ភ្លើងផ្លូវ",
+    categoryLabelKm: "ភ្លើងផ្លូវសូឡា",
     useCaseKm: "ផ្លូវ និងទីធ្លា",
     descriptionKm:
       "ភ្លើងផ្លូវរួមបញ្ចូលគ្នា សម្រាប់ផ្លូវ វីឡា បរិវេណ និងខាងក្រៅឃ្លាំង។",
   },
   prd_008: {
     titleKm: "ភ្លើងផ្លូវសូឡាបំបែក 400W",
-    categoryLabelKm: "ភ្លើងផ្លូវ",
+    categoryLabelKm: "ភ្លើងផ្លូវសូឡា",
     useCaseKm: "គម្រោងដំឡើង",
     descriptionKm:
       "ភ្លើងផ្លូវសូឡាប្រភេទបំបែក សម្រាប់បរិវេណធំ និងគម្រោងដែលត្រូវការថាមពលយូរ។",
   },
   prd_009: {
     titleKm: "បន្ទះសូឡា Monocrystalline 550W",
-    categoryLabelKm: "បន្ទះសូឡា",
+    categoryLabelKm: "ប្រព័ន្ធសូឡា",
     useCaseKm: "ផលិតថាមពល",
     descriptionKm:
       "បន្ទះសូឡាប្រសិទ្ធភាពខ្ពស់ សម្រាប់ដំបូល និងគម្រោងផលិតថាមពលដែលទុកចិត្តបាន។",
   },
   prd_010: {
     titleKm: "ឈុតបន្ទះសូឡា Hybrid 200W",
-    categoryLabelKm: "ឈុតបន្ទះសូឡា",
+    categoryLabelKm: "ឈុតប្រព័ន្ធសូឡា",
     useCaseKm: "ថាមពលបម្រុងចល័ត",
     descriptionKm:
       "ឈុតបន្ទះសូឡាតូច សម្រាប់ផ្ទះកម្សាន្ត តូបចល័ត និងឧបករណ៍តូចៗដែលត្រូវការដំឡើងលឿន។",
   },
   prd_011: {
     titleKm: "ថ្មសូឡា LiFePO4 100Ah",
-    categoryLabelKm: "ថ្ម",
+    categoryLabelKm: "ថ្មសូឡា",
     useCaseKm: "ថាមពលបម្រុង",
     descriptionKm:
       "ថ្ម LiFePO4 ដែលទុកចិត្តបាន សម្រាប់ប្រព័ន្ធសូឡាបម្រុង ជាមួយអាយុកាលប្រើប្រាស់យូរ។",
   },
   prd_012: {
     titleKm: "ថ្ម Gel Deep Cycle 200Ah",
-    categoryLabelKm: "ថ្ម",
+    categoryLabelKm: "ថ្មសូឡា",
     useCaseKm: "ថាមពលបម្រុង",
     descriptionKm:
       "ថ្ម Gel ចំណុះធំ សម្រាប់ប្រព័ន្ធ inverter ធំ និងការផ្ទុកថាមពលសូឡាច្រើនបន្ទុក។",
   },
   prd_013: {
     titleKm: "ឧបករណ៍បញ្ជាសាក MPPT 60A",
-    categoryLabelKm: "គ្រឿងបន្លាស់",
+    categoryLabelKm: "ឌ្រាយវឺរ និងគ្រឿងបន្លាស់",
     useCaseKm: "ការពារប្រព័ន្ធ",
     descriptionKm:
       "ឧបករណ៍ MPPT ឆ្លាតវៃមានអេក្រង់ LCD សម្រាប់គ្រប់គ្រងចរន្តពីបន្ទះសូឡា និងការសាកថ្ម។",
   },
   prd_014: {
     titleKm: "ឈុតភ្លើងសួនសូឡា",
-    categoryLabelKm: "ភ្លើងសួន",
+    categoryLabelKm: "ភ្លើងតុបតែង",
     useCaseKm: "តុបតែងទេសភាព",
     descriptionKm:
       "ឈុតភ្លើងសូឡាតុបតែង សម្រាប់ផ្លូវដើរ របង ហាងកាហ្វេ និងជ្រុងក្រៅអាគារ។",

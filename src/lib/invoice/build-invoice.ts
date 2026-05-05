@@ -26,6 +26,8 @@ function toInvoiceItems(items: CartItem[]): InvoiceItem[] {
     id: item.id,
     title: item.title,
     titleKm: item.titleKm,
+    imageUrl: item.imageUrl,
+    category: item.category,
     price: item.price,
     qty: item.qty,
     lineTotal: item.price * item.qty,

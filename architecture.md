@@ -1,91 +1,108 @@
 # architecture.md
 
 ## Overview
-ECO BRIGHT LED & SOLAR is a Neon-backed storefront. The UI owns browsing, carting, invoice generation, QR encoding, and Telegram handoff. Database access stays behind server-side query modules and route handlers so catalog and order persistence stay isolated from the UI layer.
+ECO BRIGHT LED & SOLAR is a Telegram-first commerce system with a Next.js storefront, Neon as the source of truth, and a staged 3-bot operating model.
+
+The current live flow is:
+1. Website creates the order first.
+2. Neon persists products, orders, order items, sessions, and order history.
+3. Telegram is the interaction layer for checkout, support, and admin action.
+4. Order confirmation is idempotent.
+5. Sessions support resume and cancel.
+6. Admin actions must reload the latest order and pass through the shared state machine.
+
+## System Boundaries
+- Web owns browsing, cart, invoice preview, QR, and order submission UX.
+- Customer bot owns conversion:
+  - deeplink restore
+  - pasted-link flow
+  - guided checkout
+  - resume/cancel
+- Sales bot owns human communication:
+  - manual follow-up
+  - special requests
+  - support chat
+- Admin bot owns operations:
+  - order review
+  - status transitions
+  - custom reasons
+  - internal notes
+- Neon owns order persistence, status history, and payload/session references.
+- Shared packages own order rules, Telegram builders, product lookup, and config.
 
 ## Data Flow
-1. The app loads product data from Neon through a server-side query layer
-2. The user searches, filters, groups, and sorts products
-3. The user adds products to the cart
-4. Zustand updates cart state and persists it locally
-5. Invoice utilities derive invoice data from the cart
-6. QR utilities encode the structured invoice payload
-7. Share utilities create readable invoice text
-8. Telegram utilities build the order handoff message or link
-9. Server routes expose products and persist orders to Neon
+1. Product data loads from Neon or the optional Google Sheets import pipeline.
+2. The user browses, searches, filters, and sorts products.
+3. Cart state lives client-side and persists locally.
+4. Invoice utilities derive a structured order summary.
+5. `POST /api/orders` validates the request and writes the order to Neon.
+6. The API returns a Telegram-ready message and URL.
+7. Telegram handoff occurs after persistence succeeds.
+8. Admin review actions update Neon and write history.
 
-## Cart Flow
-- `ProductCard` dispatches add-to-cart actions
-- `cart-store.ts` owns items, quantities, and reset logic
-- Derived values such as count, subtotal, and total come from pure helpers or selectors
-- Persistence must be safe if `localStorage` is unavailable or malformed
+## Cart And Invoice Flow
+- `cart-store.ts` owns items, quantities, and clearing.
+- Invoice calculation is pure and shared.
+- QR payloads stay compact and structured.
+- Copy/share logic stays separate from Telegram handoff.
 
-## Invoice Flow
-- Convert cart items into invoice items with `lineTotal`
-- Generate a stable invoice ID and timestamp
-- Compute subtotal and total in one place only
-- Produce both:
-  - structured JSON for QR
-  - human-readable text for copy/share/Telegram
+## Telegram Flow
+- Customer bot `@eco_bright_bot` handles `/start`, deeplink restore, pasted links, category/search/cart UX, and checkout.
+- Sales bot `@eco_bright_sale_bot` is the conversation target after order creation or when support is needed.
+- Admin bot `@eco_bright_admin_bot` is the long-term operations boundary.
+- Shared-bot mode still powers admin review by default until the separate admin runtime is enabled.
+- Inline admin actions always reload the latest order from Neon before transition.
 
-## Share Flow
-- Prefer Web Share API when available
-- Fall back to clipboard copy
-- Keep share payload human-readable first, JSON second
-- Preserve Telegram as a distinct CTA
+## Status Flow
+Supported order statuses:
+- `draft`
+- `pending`
+- `accepted`
+- `rejected`
+- `needs_clarification`
+- `processing`
+- `completed`
+- `cancelled`
+
+Rules:
+- draft before final review
+- confirm is idempotent
+- invalid transitions are rejected by `order-core`
+- custom admin text actions write history and keep the current state explicit
 
 ## Suggested Folder Structure
 ```txt
-src/
-  app/
-    api/
-      orders/route.ts
-      products/route.ts
-    layout.tsx
-    page.tsx
-    globals.css
-  components/
-    layout/
-    product/
-    cart/
-    ui/
-  lib/
-    cart-storage.ts
-    currency.ts
-    schema.ts
-    invoice.ts
-    invoice-text.ts
-    products.ts
-    qr.ts
-    share.ts
-    telegram.ts
-    utils.ts
-  store/
-    cart-store.ts
-  types/
-    product.ts
-    cart.ts
-    invoice.ts
-    google-sheet.ts
+apps/
+  web/
+  telegram-bot/
+  api/
+packages/
+  db/
+  order-core/
+  telegram-core/
+  catalog-core/
+  shared/
+  config/
+docs/
+  telegram-bots/
+scripts/
+  sync-google-sheets/
 ```
 
-## Server and Client Boundaries
-- Server-safe:
-  - metadata
-  - product loading from Neon
-  - Neon access through `src/db/*`
-  - order persistence through `app/api/orders`
-- Client-safe:
-  - search and filters
+## Server And Client Boundaries
+- Server-side only:
+  - Neon access
+  - order persistence
+  - admin action transitions
+  - Telegram admin/customer notifications
+- Client-side only:
   - cart interactions
-  - invoice panel
+  - invoice preview
   - QR display
   - copy/share actions
-  - Telegram handoff
+  - order submit button state
 
-## Future Backend Integration
-- Keep a product repository abstraction
-- Keep an order sink abstraction
-- Leave Neon logic behind query modules or API routes
-- Add order submission wiring from UI only after deciding the desired trigger point
-- Avoid coupling UI to any single data source
+## Future Scale
+- Keep order-core and telegram-core reusable for a separate admin bot or future API gateway.
+- Keep product sourcing abstract so Google Sheets and Neon can coexist.
+- Keep docs current when live flow or bot mapping changes.

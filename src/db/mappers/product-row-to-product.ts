@@ -1,5 +1,9 @@
 import type { ProductRow } from "@/db/schema";
 import {
+  getDefaultCategoryLabel,
+  normalizeCategory,
+} from "@/lib/catalog/category-rules";
+import {
   PRODUCT_CATEGORIES,
   type Product,
   type ProductBadge,
@@ -13,6 +17,11 @@ const VALID_CATEGORIES = new Set<ProductCategory>(
 function parseProductCategory(value: string): ProductCategory {
   if (VALID_CATEGORIES.has(value as ProductCategory)) {
     return value as ProductCategory;
+  }
+
+  const categoryResult = normalizeCategory(value);
+  if (categoryResult.category) {
+    return categoryResult.category;
   }
 
   throw new Error(`Invalid product category in database: ${value}`);
@@ -39,18 +48,26 @@ function parseCurrency(value: string): "USD" {
 }
 
 export function mapProductRowToProduct(row: ProductRow): Product {
+  const category = parseProductCategory(row.category);
+  const wasRemapped = category !== row.category;
+
   return {
     id: row.id,
+    brand: row.brand ?? undefined,
     title: row.title,
     titleKm: row.titleKm ?? undefined,
-    category: parseProductCategory(row.category),
-    categoryLabel: row.categoryLabel,
+    category,
+    categoryLabel:
+      wasRemapped || !row.categoryLabel?.trim()
+        ? getDefaultCategoryLabel(category)
+        : row.categoryLabel,
     categoryLabelKm: row.categoryLabelKm ?? undefined,
     useCase: row.useCase ?? undefined,
     useCaseKm: row.useCaseKm ?? undefined,
     description: row.description,
     descriptionKm: row.descriptionKm ?? undefined,
-    imageUrl: row.imageUrl,
+    imageUrl: row.imageUrl ?? null,
+    imageUrls: row.imageUrls ?? (row.imageUrl ? [row.imageUrl] : null),
     price: row.price,
     oldPrice: row.oldPrice ?? null,
     badge: parseProductBadge(row.badge),
@@ -61,5 +78,15 @@ export function mapProductRowToProduct(row: ProductRow): Product {
     isActive: row.isActive,
     rating: row.rating ?? undefined,
     createdOrder: row.createdOrder ?? undefined,
+    rawCategory: row.rawCategory ?? (wasRemapped ? row.category : undefined),
+    packQty: row.packQty ?? undefined,
+    holeSize: row.holeSize ?? undefined,
+    sourceSheet: row.sourceSheet ?? undefined,
+    sourceBlock: row.sourceBlock ?? undefined,
+    sourceRow: row.sourceRow ?? undefined,
+    sourceSegment: row.sourceSegment ?? undefined,
+    needsReview: row.needsReview,
+    reviewFlags: row.reviewFlags ?? [],
+    migrationBatchId: row.migrationBatchId ?? undefined,
   };
 }

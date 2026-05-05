@@ -1,221 +1,113 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
-import { upsertProducts } from "../src/db/queries/products";
+import { migrationRowToStagingInsert } from "../src/db/mappers/migration-row-to-product";
+import { insertProductMigrationRows } from "../src/db/queries/product-migration-rows";
+import { upsertNormalizedProducts } from "../src/db/queries/products";
+import { runCatalogPipeline } from "../src/lib/catalog/pipeline";
 import {
-  PRODUCT_CATEGORIES,
-  type Product,
-  type ProductBadge,
-  type ProductCategory,
-} from "../src/types/product";
+  buildNormalizedSheetsCsv,
+  buildReviewRowsCsv,
+  buildReviewSummaryMarkdown,
+  formatCatalogSummary,
+} from "../src/lib/catalog/reporting";
 
 loadEnv({ path: ".env.local", quiet: true });
 loadEnv({ quiet: true });
 
-const VALID_CATEGORIES = new Set<ProductCategory>(
-  PRODUCT_CATEGORIES.map((category) => category.value),
-);
-
-function parseCsvRows(input: string) {
-  const rows: string[][] = [];
-  let currentCell = "";
-  let currentRow: string[] = [];
-  let insideQuotes = false;
-
-  for (let index = 0; index < input.length; index += 1) {
-    const char = input[index];
-    const nextChar = input[index + 1];
-
-    if (char === '"') {
-      if (insideQuotes && nextChar === '"') {
-        currentCell += '"';
-        index += 1;
-        continue;
-      }
-
-      insideQuotes = !insideQuotes;
-      continue;
-    }
-
-    if (char === "," && !insideQuotes) {
-      currentRow.push(currentCell);
-      currentCell = "";
-      continue;
-    }
-
-    if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (char === "\r" && nextChar === "\n") {
-        index += 1;
-      }
-
-      currentRow.push(currentCell);
-      rows.push(currentRow);
-      currentCell = "";
-      currentRow = [];
-      continue;
-    }
-
-    currentCell += char;
-  }
-
-  if (currentCell.length > 0 || currentRow.length > 0) {
-    currentRow.push(currentCell);
-    rows.push(currentRow);
-  }
-
-  return rows.filter((row) => row.some((cell) => cell.trim() !== ""));
+interface CliOptions {
+  filePath: string;
+  target: "neon" | "sheets";
+  apply: boolean;
 }
 
-function parseOptionalNumber(value: string) {
-  if (!value.trim()) {
-    return undefined;
+function parseArgs(): CliOptions {
+  const args = process.argv.slice(2);
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!filePath) {
+    throw new Error(
+      "Usage: npm run import:products:csv -- ./path/to/products.csv [--target neon|sheets] [--apply]",
+    );
   }
 
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
+  const targetFlag = args.find((arg) => arg.startsWith("--target="));
+  const target =
+    (targetFlag?.split("=")[1] as "neon" | "sheets" | undefined) ?? "neon";
 
-function parseBoolean(value: string, fallback: boolean) {
-  const normalized = value.trim().toLowerCase();
-
-  if (!normalized) {
-    return fallback;
-  }
-
-  if (["true", "1", "yes"].includes(normalized)) {
-    return true;
-  }
-
-  if (["false", "0", "no"].includes(normalized)) {
-    return false;
-  }
-
-  return fallback;
-}
-
-function parseBadge(value: string): ProductBadge | undefined {
-  const normalized = value.trim().toLowerCase();
-
-  if (!normalized) {
-    return undefined;
-  }
-
-  if (normalized === "new" || normalized === "hot" || normalized === "sale") {
-    return normalized;
-  }
-
-  return undefined;
-}
-
-function toObjectRows(rows: string[][]) {
-  const [headerRow, ...dataRows] = rows;
-
-  if (!headerRow) {
-    throw new Error("CSV file is missing a header row.");
-  }
-
-  const headers = headerRow.map((header) => header.trim());
-
-  return dataRows.map((row) =>
-    headers.reduce<Record<string, string>>((accumulator, header, index) => {
-      accumulator[header] = row[index]?.trim() ?? "";
-      return accumulator;
-    }, {}),
-  );
-}
-
-function normalizeCsvRow(row: Record<string, string>, rowNumber: number): Product {
-  const category = row.category.trim() as ProductCategory;
-
-  if (!VALID_CATEGORIES.has(category)) {
-    throw new Error(`Row ${rowNumber}: invalid category "${row.category}".`);
-  }
-
-  const price = parseOptionalNumber(row.price);
-
-  if (!row.id.trim()) {
-    throw new Error(`Row ${rowNumber}: missing id.`);
-  }
-
-  if (!row.title.trim()) {
-    throw new Error(`Row ${rowNumber}: missing title.`);
-  }
-
-  if (!row.categoryLabel.trim()) {
-    throw new Error(`Row ${rowNumber}: missing categoryLabel.`);
-  }
-
-  if (!row.description.trim()) {
-    throw new Error(`Row ${rowNumber}: missing description.`);
-  }
-
-  if (!row.imageUrl.trim()) {
-    throw new Error(`Row ${rowNumber}: missing imageUrl.`);
-  }
-
-  if (price === undefined) {
-    throw new Error(`Row ${rowNumber}: invalid price.`);
+  if (target !== "neon" && target !== "sheets") {
+    throw new Error(`Unsupported target "${target}". Use --target=neon or --target=sheets.`);
   }
 
   return {
-    id: row.id.trim(),
-    title: row.title.trim(),
-    titleKm: row.titleKm?.trim() || undefined,
-    category,
-    categoryLabel: row.categoryLabel.trim(),
-    categoryLabelKm: row.categoryLabelKm?.trim() || undefined,
-    useCase: row.useCase?.trim() || undefined,
-    useCaseKm: row.useCaseKm?.trim() || undefined,
-    description: row.description.trim(),
-    descriptionKm: row.descriptionKm?.trim() || undefined,
-    imageUrl: row.imageUrl.trim(),
-    price,
-    oldPrice: parseOptionalNumber(row.oldPrice ?? "") ?? null,
-    badge: parseBadge(row.badge ?? ""),
-    tags: (row.tags ?? "")
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
-    currency: "USD",
-    inStock: parseBoolean(row.inStock ?? "", true),
-    sortOrder: parseOptionalNumber(row.sortOrder ?? ""),
-    isActive: parseBoolean(row.isActive ?? "", true),
-    rating: parseOptionalNumber(row.rating ?? ""),
-    createdOrder: parseOptionalNumber(row.createdOrder ?? "") ?? rowNumber,
+    filePath,
+    target,
+    apply: args.includes("--apply"),
   };
 }
 
+function ensureArtifactDirectory(batchId: string) {
+  const outputDir = resolve(
+    process.cwd(),
+    "artifacts",
+    "catalog-migration",
+    batchId,
+  );
+
+  mkdirSync(outputDir, { recursive: true });
+  return outputDir;
+}
+
 async function main() {
-  const filePath = process.argv[2];
+  const options = parseArgs();
+  const resolvedPath = resolve(process.cwd(), options.filePath);
+  const result = runCatalogPipeline({ filePath: resolvedPath });
 
-  if (!filePath) {
-    throw new Error("Usage: npm run import:products:csv -- ./path/to/products.csv");
+  console.info(formatCatalogSummary(result.summary));
+
+  if (!options.apply) {
+    console.info(
+      `[catalog] Dry run complete for ${options.target}. Re-run with --apply to persist output.`,
+    );
+    return;
   }
 
-  const resolvedPath = resolve(process.cwd(), filePath);
-  const rawRows = toObjectRows(parseCsvRows(readFileSync(resolvedPath, "utf8")));
+  if (options.target === "neon") {
+    const stagingResult = await insertProductMigrationRows(
+      result.rows.map(migrationRowToStagingInsert),
+    );
+    const upsertResult = await upsertNormalizedProducts(result.rows);
 
-  const products: Product[] = [];
-  const invalidRows: string[] = [];
-
-  rawRows.forEach((row, index) => {
-    try {
-      products.push(normalizeCsvRow(row, index + 2));
-    } catch (error) {
-      invalidRows.push(error instanceof Error ? error.message : `Row ${index + 2}: invalid row.`);
-    }
-  });
-
-  if (invalidRows.length) {
-    console.error("[neon] Skipping invalid CSV rows:");
-    invalidRows.forEach((message) => console.error(`- ${message}`));
+    console.info(
+      `[catalog] Imported batch ${result.batchId}: staged ${stagingResult.count} rows, upserted ${upsertResult.count} normalized products.`,
+    );
+    return;
   }
 
-  const result = await upsertProducts(products);
-  console.info(`[neon] Imported ${result.count} products from CSV.`);
+  const outputDir = ensureArtifactDirectory(result.batchId);
+  writeFileSync(
+    resolve(outputDir, "products.normalized.csv"),
+    buildNormalizedSheetsCsv(result.rows),
+    "utf8",
+  );
+  writeFileSync(
+    resolve(outputDir, "products.review.csv"),
+    buildReviewRowsCsv(result.rows),
+    "utf8",
+  );
+  writeFileSync(
+    resolve(outputDir, "review-summary.md"),
+    buildReviewSummaryMarkdown({
+      batchId: result.batchId,
+      summary: result.summary,
+    }),
+    "utf8",
+  );
+
+  console.info(`[catalog] Exported sheets artifacts to ${outputDir}`);
 }
 
 main().catch((error) => {
-  console.error("[neon] CSV import failed", error);
+  console.error("[catalog] Product import failed", error);
   process.exit(1);
 });

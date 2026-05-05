@@ -1,11 +1,8 @@
 "use client";
 
-import { useLocale } from "@/components/locale/locale-provider";
 import type { Product, ProductGroupSection as ProductGroupSectionType } from "@/types/product";
-import { EmptyState } from "@/components/common/empty-state";
-import { Button } from "@/components/ui/button";
-import { getUiText } from "@/lib/i18n";
 import { ProductGroupSection } from "@/components/product/product-group-section";
+import { ProductEmptyState } from "@/components/product/product-empty-state";
 
 interface ProductGridProps {
   sections: ProductGroupSectionType[];
@@ -18,21 +15,8 @@ export function ProductGrid({
   onAddToCart,
   onResetFilters,
 }: ProductGridProps) {
-  const { locale } = useLocale();
-  const copy = getUiText(locale).storefront;
-
   if (!sections.length) {
-    return (
-      <EmptyState
-        title={copy.noProductsFound}
-        description={copy.noProductsDescription}
-        action={
-          <Button variant="outline" onClick={onResetFilters}>
-            {copy.resetCatalogView}
-          </Button>
-        }
-      />
-    );
+    return <ProductEmptyState onReset={onResetFilters} />;
   }
 
   return (

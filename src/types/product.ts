@@ -3,20 +3,42 @@ export type ProductBadge = "new" | "hot" | "sale";
 export type ProductCategory =
   | "led-bulbs"
   | "led-tubes"
+  | "panel-lights"
+  | "downlights"
+  | "ceiling-lights"
+  | "linear-lights"
   | "flood-lights"
-  | "street-lights"
-  | "solar-panels"
-  | "batteries"
-  | "accessories";
+  | "high-bay-lights"
+  | "solar-flood-lights"
+  | "solar-street-lights"
+  | "solar-systems"
+  | "water-pumps"
+  | "led-strip-lights"
+  | "decorative-lights"
+  | "string-lights"
+  | "drivers-accessories"
+  | "fans"
+  | "wire-cables";
 
 export const PRODUCT_CATEGORIES = [
   { value: "led-bulbs", label: "LED Bulbs", labelKm: "អំពូល LED" },
   { value: "led-tubes", label: "LED Tubes", labelKm: "បំពង់ LED" },
+  { value: "panel-lights", label: "Panel Lights", labelKm: "ភ្លើងបន្ទះ" },
+  { value: "downlights", label: "Downlights", labelKm: "ភ្លើងដោនឡាយ" },
+  { value: "ceiling-lights", label: "Ceiling Lights", labelKm: "ភ្លើងពិដាន" },
+  { value: "linear-lights", label: "Linear Lights", labelKm: "ភ្លើងបន្ទាត់" },
   { value: "flood-lights", label: "Flood Lights", labelKm: "ភ្លើងហ្វ្លដ៍" },
-  { value: "street-lights", label: "Street Lights", labelKm: "ភ្លើងផ្លូវ" },
-  { value: "solar-panels", label: "Solar Panels", labelKm: "បន្ទះសូឡា" },
-  { value: "batteries", label: "Batteries", labelKm: "ថ្ម" },
-  { value: "accessories", label: "Accessories", labelKm: "គ្រឿងបន្លាស់" },
+  { value: "high-bay-lights", label: "High Bay Lights", labelKm: "ភ្លើងរោងចក្រ" },
+  { value: "solar-flood-lights", label: "Solar Flood Lights", labelKm: "ភ្លើងហ្វ្លដ៍សូឡា" },
+  { value: "solar-street-lights", label: "Solar Street Lights", labelKm: "ភ្លើងផ្លូវសូឡា" },
+  { value: "solar-systems", label: "Solar Systems", labelKm: "ប្រព័ន្ធសូឡា" },
+  { value: "water-pumps", label: "Water Pumps", labelKm: "ម៉ាស៊ីនបូមទឹក" },
+  { value: "led-strip-lights", label: "LED Strip Lights", labelKm: "ខ្សែភ្លើង LED" },
+  { value: "decorative-lights", label: "Decorative Lights", labelKm: "ភ្លើងតុបតែង" },
+  { value: "string-lights", label: "String Lights", labelKm: "ភ្លើងខ្សែតុបតែង" },
+  { value: "drivers-accessories", label: "Drivers & Accessories", labelKm: "ឌ្រាយវឺរ និងគ្រឿងបន្លាស់" },
+  { value: "fans", label: "Fans", labelKm: "កង្ហារ" },
+  { value: "wire-cables", label: "Wire & Cables", labelKm: "ខ្សែភ្លើង និងខ្សែកាប" },
 ] as const satisfies ReadonlyArray<{ value: ProductCategory; label: string; labelKm: string }>;
 
 export type ProductFilterValue = ProductCategory | "all";
@@ -41,6 +63,7 @@ export type ProductSortMode = (typeof PRODUCT_SORT_MODES)[number]["value"];
 
 export interface Product {
   id: string;
+  brand?: string;
   title: string;
   titleKm?: string;
   category: ProductCategory;
@@ -50,7 +73,8 @@ export interface Product {
   useCaseKm?: string;
   description: string;
   descriptionKm?: string;
-  imageUrl: string;
+  imageUrl: string | null;
+  imageUrls?: string[] | null;
   price: number;
   oldPrice?: number | null;
   badge?: ProductBadge;
@@ -61,6 +85,16 @@ export interface Product {
   isActive: boolean;
   rating?: number;
   createdOrder?: number;
+  rawCategory?: string;
+  packQty?: number;
+  holeSize?: string;
+  sourceSheet?: string;
+  sourceBlock?: string;
+  sourceRow?: string;
+  sourceSegment?: string;
+  needsReview?: boolean;
+  reviewFlags?: string[];
+  migrationBatchId?: string;
 }
 
 export interface ProductGroupSection {

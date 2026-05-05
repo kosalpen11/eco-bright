@@ -6,7 +6,7 @@ import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProductImageProps {
-  src: string;
+  src: string | null;
   alt: string;
   sizes: string;
   className?: string;
@@ -29,7 +29,7 @@ export function ProductImage({
         className,
       )}
     >
-      {hasError ? (
+      {hasError || !src?.trim() ? (
         <div className="grid h-full min-h-52 place-items-center bg-app-surface text-app-text-muted">
           <div className="flex flex-col items-center gap-2">
             <ImageOff className="size-6" />
