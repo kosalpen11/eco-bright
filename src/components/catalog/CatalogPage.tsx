@@ -8,7 +8,9 @@ import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { SearchInput } from "@/components/catalog/SearchInput";
 import { SortSelect } from "@/components/catalog/SortSelect";
 import { getBrands, getCategories, getProducts } from "@/lib/db/products";
-import { TELEGRAM_OWNER_URL } from "@/lib/constants";
+import { MARQUEE_ITEMS, TELEGRAM_OWNER_URL } from "@/lib/constants";
+import { getUiText } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/locale-server";
 import type { ProductCategory, ProductFilters, ProductSortMode } from "@/lib/types";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -65,6 +67,9 @@ export async function CatalogPage({
   searchParams: SearchParams;
   brand?: string | null;
 }) {
+  const locale = await getRequestLocale();
+  const copy = getUiText(locale).catalog;
+
   const sp = await searchParams;
 
   const categoryParam = (firstValue(sp.category) ?? "").trim();
@@ -98,6 +103,11 @@ export async function CatalogPage({
 
   const allCount = dbCategories.reduce((acc, c) => acc + c.count, 0);
   const categories = buildCategoryPills(dbCategories, allCount);
+  const marqueeItems = [
+    ...brands.slice(0, 6).map((b) => b.label),
+    ...MARQUEE_ITEMS,
+  ].filter(Boolean);
+  const uniqueMarqueeItems = Array.from(new Set(marqueeItems)).slice(0, 16);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -109,7 +119,7 @@ export async function CatalogPage({
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-amber-700"
-              aria-label="Contact sales on Telegram"
+              aria-label={copy.contactSales}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -119,7 +129,7 @@ export async function CatalogPage({
               >
                 <path d="M9.993 15.544 9.83 19.1c.35 0 .503-.15.686-.33l1.645-1.57 3.41 2.496c.625.345 1.067.163 1.223-.577l2.216-10.39c.227-1.01-.37-1.404-.98-1.18L4.24 11.39c-.96.38-.946.925-.165 1.17l3.56 1.11 8.26-5.22c.39-.24.744-.11.452.13z" />
               </svg>
-              Contact Sales
+              {copy.contactSales}
             </a>
           </div>
         </div>
@@ -140,7 +150,7 @@ export async function CatalogPage({
               </div>
             </div>
             <div className="text-[11px] font-medium uppercase tracking-wider text-gray-500">
-              Product Catalog
+              {copy.catalogSubtitle}
             </div>
           </div>
 
@@ -153,7 +163,7 @@ export async function CatalogPage({
               {total}
             </div>
             <div className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-500">
-              Products
+              {copy.productsLabel}
             </div>
           </div>
         </div>
@@ -165,13 +175,36 @@ export async function CatalogPage({
         </div>
       </div>
 
+      <div className="hide-on-print border-b border-gray-100 bg-white">
+        <div className="mx-auto w-full max-w-6xl px-4 py-3">
+          <div className="flex items-center gap-3">
+          <div className="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-800">
+              {copy.trending}
+            </div>
+
+            <div className="group relative flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+              <div className="flex w-max min-w-full gap-3 [animation:marquee_30s_linear_infinite] group-hover:[animation-play-state:paused] will-change-transform">
+                {Array.from({ length: 2 }).flatMap((_, loop) =>
+                  uniqueMarqueeItems.map((item) => (
+                    <div
+                      key={`${loop}-${item}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-700" />
+                      <span className="whitespace-nowrap">{item}</span>
+                    </div>
+                  )),
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-gray-500">
-            Showing{" "}
-            <span className="font-medium text-gray-900">{products.length}</span>{" "}
-            of <span className="font-medium text-gray-900">{total}</span>{" "}
-            products
+            {copy.showing(products.length, total)}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -179,7 +212,7 @@ export async function CatalogPage({
             <PriceRangeFilter />
             <div className="flex items-center gap-2">
               <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                Sort by
+                {copy.sortBy}
               </div>
               <SortSelect />
             </div>
@@ -187,7 +220,7 @@ export async function CatalogPage({
         </div>
 
         <div className="mt-5">
-          <ProductGrid products={products} />
+          <ProductGrid products={products} locale={locale} />
         </div>
 
         <div className="mt-8">

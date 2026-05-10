@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { LocaleProvider } from "@/components/locale/locale-provider";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { SHOP_DESCRIPTION, SHOP_NAME } from "@/lib/constants";
-import { DEFAULT_LOCALE } from "@/lib/locale";
+import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
 import {
   DEFAULT_THEME,
   THEME_ATTRIBUTE,
@@ -51,6 +52,11 @@ export const metadata: Metadata = {
     template: `%s | ${SHOP_NAME}`,
   },
   description: SHOP_DESCRIPTION,
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: "/favicon.ico" }],
+  },
   keywords: [
     "LED storefront",
     "solar products",
@@ -72,15 +78,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get(LOCALE_COOKIE_KEY)?.value;
+  const locale = resolveLocale(cookieLocale ?? DEFAULT_LOCALE);
+
   return (
     <html
-      lang={DEFAULT_LOCALE}
-      data-locale={DEFAULT_LOCALE}
+      lang={locale}
+      data-locale={locale}
       data-theme={DEFAULT_THEME}
       suppressHydrationWarning
       className={`${outfit.variable} ${notoSansKhmer.variable} ${bebasNeue.variable} h-full scroll-smooth antialiased`}

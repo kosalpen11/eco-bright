@@ -3,22 +3,29 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import type { ProductSortMode } from "@/lib/types";
+import { useLocale } from "@/components/locale/locale-provider";
+import { getUiText } from "@/lib/i18n";
 
-const OPTIONS: Array<{ value: ProductSortMode; label: string }> = [
-  { value: "default", label: "Default" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "name-asc", label: "Name A–Z" },
-];
+function getOptions(copy: ReturnType<typeof getUiText>["catalog"]) {
+  return [
+    { value: "default" as const, label: copy.sortDefault },
+    { value: "price-asc" as const, label: copy.sortPriceAsc },
+    { value: "price-desc" as const, label: copy.sortPriceDesc },
+    { value: "name-asc" as const, label: copy.sortNameAsc },
+  ];
+}
 
 function isSortMode(value: string): value is ProductSortMode {
-  return OPTIONS.some((opt) => opt.value === value);
+  return value === "default" || value === "price-asc" || value === "price-desc" || value === "name-asc";
 }
 
 export function SortSelect() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
+  const copy = getUiText(locale).catalog;
+  const OPTIONS = getOptions(copy);
 
   const current = searchParams.get("sort");
   const value: ProductSortMode = current && isSortMode(current) ? current : "default";
@@ -52,4 +59,3 @@ export function SortSelect() {
     </select>
   );
 }
-

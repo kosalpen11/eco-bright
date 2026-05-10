@@ -9,6 +9,7 @@ import {
   DEFAULT_LOCALE,
   getHtmlLang,
   LOCALE_ATTRIBUTE,
+  LOCALE_COOKIE_KEY,
   LOCALE_STORAGE_KEY,
   resolveLocale,
   type Locale,
@@ -60,6 +61,23 @@ function writeStoredLocale(locale: Locale) {
   }
 }
 
+function persistLocaleCookie(locale: Locale) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    // Best-effort: keep server-rendered locale in sync across navigations.
+    void fetch("/api/locale", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale }),
+    });
+  } catch {
+    // Ignore network issues; localStorage + in-memory locale still work.
+  }
+}
+
 function getDocumentLocale() {
   if (typeof document === "undefined") {
     return DEFAULT_LOCALE;
@@ -72,6 +90,7 @@ function setLocale(locale: Locale) {
   currentLocale = locale;
   applyLocaleToDocument(locale);
   writeStoredLocale(locale);
+  persistLocaleCookie(locale);
   notify();
 }
 

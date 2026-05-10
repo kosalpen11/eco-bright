@@ -4,7 +4,7 @@ export const SHOP_TAGLINE = "LED & solar that lasts";
 export const SHOP_DESCRIPTION =
   "Premium LED lighting and solar products with mobile-first browsing, local cart + invoice generation, QR handoff, and direct Telegram ordering.";
 const DEFAULT_TELEGRAM_PUBLIC_URL = "https://t.me/eco_bright_sale_bot";
-const DEFAULT_TELEGRAM_OWNER_URL = "+85512710410";
+const DEFAULT_TELEGRAM_OWNER_URL = "@sonita17";
 
 function normalizeTelegramBaseUrl(value: string) {
   const normalized = value.trim();

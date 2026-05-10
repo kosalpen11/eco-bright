@@ -11,6 +11,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      // Admin-controlled product images come from many supplier domains.
+      // We allow http/https here; for untrusted input consider adding a proxy
+      // route with a strict allowlist.
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
+      },
     ],
   },
 };

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "@/components/locale/locale-provider";
+import { getUiText } from "@/lib/i18n";
 
 function parsePriceInput(value: string): number | null {
   const trimmed = value.trim();
@@ -15,6 +17,8 @@ export function PriceRangeFilter() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
+  const copy = getUiText(locale).catalog;
 
   const minRef = useRef<HTMLInputElement | null>(null);
   const maxRef = useRef<HTMLInputElement | null>(null);
@@ -53,7 +57,7 @@ export function PriceRangeFilter() {
   return (
     <div className="flex items-center gap-2">
       <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-        Price
+        {copy.price}
       </div>
 
       <div className="flex items-center gap-2">
@@ -64,12 +68,12 @@ export function PriceRangeFilter() {
           min={0}
           step="0.01"
           defaultValue={minParam}
-          placeholder="Min"
+          placeholder={copy.min}
           onChange={scheduleUpdate}
           className="h-9 w-[110px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-700 focus:outline-none focus:ring-0"
         />
 
-        <span className="text-sm text-gray-300">to</span>
+        <span className="text-sm text-gray-300">{copy.to}</span>
 
         <input
           key={`max:${maxParam}`}
@@ -78,7 +82,7 @@ export function PriceRangeFilter() {
           min={0}
           step="0.01"
           defaultValue={maxParam}
-          placeholder="Max"
+          placeholder={copy.max}
           onChange={scheduleUpdate}
           className="h-9 w-[110px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-700 focus:outline-none focus:ring-0"
         />

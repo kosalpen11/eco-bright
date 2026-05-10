@@ -6,6 +6,10 @@ import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/db/products";
 import { TELEGRAM_OWNER_URL } from "@/lib/constants";
 import { CopyProductButton } from "@/components/catalog/CopyProductButton";
+import { TelegramOrderButton } from "@/components/catalog/TelegramOrderButton";
+import { getUiText } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/locale-server";
+import { localizeText } from "@/lib/i18n";
 
 type Params = Promise<{ id: string }>;
 
@@ -14,8 +18,8 @@ function isAllowedImageUrl(url: string) {
   if (!url.startsWith("http")) return false;
 
   try {
-    const parsed = new URL(url);
-    return parsed.hostname === "images.unsplash.com";
+    new URL(url);
+    return true;
   } catch {
     return false;
   }
@@ -289,7 +293,13 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
   const product = await getProductById(id);
   if (!product) notFound();
 
+  const locale = await getRequestLocale();
+  const copy = getUiText(locale).catalog;
+
   const brand = brandFromId(product.id);
+  const displayName = localizeText(locale, product.name, product.titleKm);
+  const displayUseCase =
+    localizeText(locale, product.useCase ?? "", product.useCaseKm) || null;
 
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -312,7 +322,7 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-amber-700"
-              aria-label="Contact sales on Telegram"
+              aria-label={copy.contactSales}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -322,7 +332,7 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
               >
                 <path d="M9.993 15.544 9.83 19.1c.35 0 .503-.15.686-.33l1.645-1.57 3.41 2.496c.625.345 1.067.163 1.223-.577l2.216-10.39c.227-1.01-.37-1.404-.98-1.18L4.24 11.39c-.96.38-.946.925-.165 1.17l3.56 1.11 8.26-5.22c.39-.24.744-.11.452.13z" />
               </svg>
-              Contact Sales
+              {copy.contactSales}
             </a>
           </div>
         </div>
@@ -331,7 +341,7 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
             href="/products"
             className="text-sm font-medium text-gray-600 hover:text-amber-700"
           >
-            Back to Catalog
+            {copy.backToCatalog}
           </Link>
 
           <div className="flex items-center gap-2">
@@ -408,45 +418,36 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
             </div>
 
             <h1 className="mt-3 text-xl font-semibold tracking-tight text-gray-900">
-              {product.name}
+              {displayName}
             </h1>
 
-            {product.useCase ? (
-              <div className="mt-1 text-sm text-gray-500">{product.useCase}</div>
+            {displayUseCase ? (
+              <div className="mt-1 text-sm text-gray-500">{displayUseCase}</div>
             ) : null}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
                 <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Price
+                  {copy.price}
                 </div>
                 <div className="mt-2 text-lg font-semibold text-amber-700">
                   {formatter.format(product.price)}{" "}
-                  <span className="text-sm font-medium text-gray-500">/ unit</span>
+                  <span className="text-sm font-medium text-gray-500">{copy.eachUnit}</span>
                 </div>
               </div>
 
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
                 <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Pack Size
+                  {copy.availability}
                 </div>
                 <div className="mt-2 text-sm font-medium text-gray-900">
-                  {product.packQty ?? "—"}
+                  {product.inStock ? copy.inStock : copy.outOfStock}
                 </div>
               </div>
 
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
                 <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Availability
-                </div>
-                <div className="mt-2 text-sm font-medium text-gray-900">
-                  {product.inStock ? "In stock" : "Out of stock"}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Product ID
+                  {copy.productId}
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="min-w-0 truncate font-mono text-sm text-gray-700">
@@ -458,6 +459,18 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
                     className="h-8 shrink-0 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <TelegramOrderButton
+                productId={product.id}
+                productName={product.name}
+                priceText={`${formatter.format(product.price)} ${copy.eachUnit}`}
+                className="h-10 w-full rounded-lg border border-gray-200 text-sm font-semibold text-gray-800 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
+              />
+              <div className="mt-2 text-xs text-gray-500">
+                {copy.requestOrderNote}
               </div>
             </div>
           </div>

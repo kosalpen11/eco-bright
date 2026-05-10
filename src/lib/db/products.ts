@@ -114,20 +114,19 @@ export async function getProducts(filters: ProductFilters): Promise<{
       SELECT
         p.id,
         p.title,
+        p.title_km AS "titleKm",
         COALESCE(to_jsonb(p) ->> 'name', p.title) AS name,
         p.category,
         p.category_label AS "categoryLabel",
+        p.category_label_km AS "categoryLabelKm",
         p.price,
         p.old_price AS "oldPrice",
         p.badge,
         p.pack_qty::text AS "packQty",
         p.use_case AS "useCase",
+        p.use_case_km AS "useCaseKm",
         p.image_url AS "imageUrl",
-        ARRAY(
-          SELECT jsonb_array_elements_text(
-            COALESCE(to_jsonb(p) -> 'image_urls', '[]'::jsonb)
-          )
-        ) AS "imageUrls",
+        COALESCE(p.image_urls, ARRAY[]::text[]) AS "imageUrls",
         p.currency,
         p.in_stock AS "inStock",
         p.is_active AS "isActive",
@@ -145,14 +144,17 @@ export async function getProducts(filters: ProductFilters): Promise<{
   const products: Product[] = (productRows ?? []).map((row) => ({
     id: row.id,
     title: row.title,
+    titleKm: row.titleKm ?? null,
     name: row.name,
     category: row.category,
     categoryLabel: row.categoryLabel,
+    categoryLabelKm: row.categoryLabelKm ?? null,
     price: toNumber(row.price),
     oldPrice: toNullableNumber(row.oldPrice),
     badge: row.badge ?? null,
     packQty: row.packQty ?? null,
     useCase: row.useCase ?? null,
+    useCaseKm: row.useCaseKm ?? null,
     imageUrl: row.imageUrl ?? null,
     imageUrls:
       toStringArray(row.imageUrls).length > 0
@@ -225,20 +227,19 @@ export async function getProductById(id: string): Promise<Product | null> {
     SELECT
       p.id,
       p.title,
+      p.title_km AS "titleKm",
       COALESCE(to_jsonb(p) ->> 'name', p.title) AS name,
       p.category,
       p.category_label AS "categoryLabel",
+      p.category_label_km AS "categoryLabelKm",
       p.price,
       p.old_price AS "oldPrice",
       p.badge,
       p.pack_qty::text AS "packQty",
       p.use_case AS "useCase",
+      p.use_case_km AS "useCaseKm",
       p.image_url AS "imageUrl",
-      ARRAY(
-        SELECT jsonb_array_elements_text(
-          COALESCE(to_jsonb(p) -> 'image_urls', '[]'::jsonb)
-        )
-      ) AS "imageUrls",
+      COALESCE(p.image_urls, ARRAY[]::text[]) AS "imageUrls",
       p.currency,
       p.in_stock AS "inStock",
       p.is_active AS "isActive",
@@ -254,14 +255,17 @@ export async function getProductById(id: string): Promise<Product | null> {
   return {
     id: row.id,
     title: row.title,
+    titleKm: row.titleKm ?? null,
     name: row.name,
     category: row.category,
     categoryLabel: row.categoryLabel,
+    categoryLabelKm: row.categoryLabelKm ?? null,
     price: toNumber(row.price),
     oldPrice: toNullableNumber(row.oldPrice),
     badge: row.badge ?? null,
     packQty: row.packQty ?? null,
     useCase: row.useCase ?? null,
+    useCaseKm: row.useCaseKm ?? null,
     imageUrl: row.imageUrl ?? null,
     imageUrls:
       toStringArray(row.imageUrls).length > 0

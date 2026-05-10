@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useLocale } from "@/components/locale/locale-provider";
+import { getUiText } from "@/lib/i18n";
 
 async function copyText(text: string) {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -31,6 +33,8 @@ export function CopyProductButton({
 }) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { locale } = useLocale();
+  const copy = getUiText(locale).catalog;
 
   async function onCopy() {
     const text = `${productId} | ${productName}`;
@@ -53,8 +57,7 @@ export function CopyProductButton({
         "inline-flex h-8 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
       }
     >
-      {copied ? "Copied" : "Copy"}
+      {copied ? copy.copied : copy.copy}
     </button>
   );
 }
-

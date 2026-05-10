@@ -1,16 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { Locale } from "@/lib/locale";
 import type { Product } from "@/lib/types";
 import { CopyProductButton } from "@/components/catalog/CopyProductButton";
+import { TelegramOrderButton } from "@/components/catalog/TelegramOrderButton";
+import { getUiText, localizeText } from "@/lib/i18n";
 
 function isAllowedImageUrl(url: string) {
   if (url.startsWith("/")) return true;
   if (!url.startsWith("http")) return false;
 
   try {
-    const parsed = new URL(url);
-    return parsed.hostname === "images.unsplash.com";
+    new URL(url);
+    return true;
   } catch {
     return false;
   }
@@ -265,7 +268,10 @@ function brandFromId(id: string) {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, locale }: { product: Product; locale: Locale }) {
+  const copy = getUiText(locale).catalog;
+  const name = localizeText(locale, product.name, product.titleKm);
+  const useCase = localizeText(locale, product.useCase ?? "", product.useCaseKm) || "";
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: product.currency || "USD",
@@ -280,68 +286,78 @@ export function ProductCard({ product }: { product: Product }) {
   const imageUrl = primaryImage && isAllowedImageUrl(primaryImage) ? primaryImage : null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white transition-colors hover:border-gray-300">
-      <div className="relative flex h-[120px] items-center justify-center bg-gray-100">
-        <div className="absolute left-3 top-3 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-          {product.categoryLabel}
-        </div>
-
+    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-colors hover:border-gray-300">
+      {/* ── Image / placeholder ── */}
+      <div className="relative flex h-40 items-center justify-center bg-gray-50">
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={product.name}
+            alt={name}
             fill
-            className="object-contain p-6"
-            sizes="200px"
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 280px"
           />
         ) : (
           <CategoryIcon category={product.category} />
         )}
+
+        {brand && (
+          <div className="absolute left-3 top-3 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+            {brand}
+          </div>
+        )}
       </div>
 
-      <div className="p-4">
-        <div className="inline-flex rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600">
-          {brand ? brand : "Unknown Brand"}
+      {/* ── Body ── */}
+      <div className="flex flex-1 flex-col p-4">
+        {/* Badges row — category shown once here, brand if present */}
+        <div className="flex flex-wrap items-center gap-2">
+          {brand && (
+            <div className="inline-flex rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600">
+              {brand}
+            </div>
+          )}
         </div>
 
-        <div className="mt-3 text-sm font-medium text-gray-900">
-          {product.name}
+        {/* Name */}
+        <div className="mt-3 text-sm font-medium leading-snug text-gray-900">
+          {name}
         </div>
 
-        {product.useCase ? (
-          <div className="mt-1 text-xs text-gray-500">{product.useCase}</div>
-        ) : (
-          <div className="mt-1 h-4" />
-        )}
+        {/* Use-case subtitle — keeps height stable when absent */}
+        <div className="mt-1 min-h-[1rem] text-xs text-gray-500">{useCase}</div>
 
+        {/* Price */}
         <div className="mt-3 text-lg font-semibold text-amber-700">
           {formatter.format(product.price)}{" "}
           <span className="text-sm font-medium text-gray-500">/ unit</span>
         </div>
 
-        {product.packQty ? (
-          <div className="mt-1 text-sm text-gray-500">
-            <span className="mr-2 text-gray-300">&middot;</span>
-            Pack: {product.packQty}
-          </div>
-        ) : (
-          <div className="mt-1 h-5" />
-        )}
+        {/* Push actions to bottom */}
+        <div className="mt-auto pt-4 space-y-2">
+          <Link
+            href={`/products/${product.id}`}
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:border-amber-700 hover:bg-amber-700 hover:text-white"
+          >
+            {copy.viewDetails}
+          </Link>
 
-        <Link
-          href={`/products/${product.id}`}
-          className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
-        >
-          View Details
-        </Link>
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="text-xs text-gray-400">{product.id}</div>
-          <CopyProductButton
+          <TelegramOrderButton
             productId={product.id}
-            productName={product.name}
-            className="h-8 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
+            productName={name}
+            priceText={`${formatter.format(product.price)} ${copy.eachUnit}`}
+            className="h-9 w-full rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
           />
+
+          {/* Product ID + copy */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="truncate text-xs text-gray-400">{product.id}</div>
+            <CopyProductButton
+              productId={product.id}
+              productName={name}
+              className="shrink-0 h-8 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
+            />
+          </div>
         </div>
       </div>
     </div>

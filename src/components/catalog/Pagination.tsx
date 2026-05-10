@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "@/components/locale/locale-provider";
+import { getUiText } from "@/lib/i18n";
 
 function buildPageItems(page: number, totalPages: number): Array<number | "..."> {
   if (totalPages <= 7) {
@@ -40,6 +42,8 @@ export function Pagination({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
+  const copy = getUiText(locale).catalog;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -69,7 +73,7 @@ export function Pagination({
         disabled={page <= 1}
         className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-300"
       >
-        Prev
+        {copy.prev}
       </button>
 
       <div className="flex items-center gap-1">
@@ -108,7 +112,7 @@ export function Pagination({
         disabled={page >= totalPages}
         className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-300"
       >
-        Next
+        {copy.next}
       </button>
     </nav>
   );
