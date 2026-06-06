@@ -5,6 +5,7 @@ export const SHOP_DESCRIPTION =
   "Premium LED lighting and solar products with mobile-first browsing, local cart + invoice generation, QR handoff, and direct Telegram ordering.";
 const DEFAULT_TELEGRAM_PUBLIC_URL = "https://t.me/eco_bright_sale_bot";
 const DEFAULT_TELEGRAM_OWNER_URL = "@sonita17";
+const DEFAULT_TELEGRAM_USERNAME = "sonita17";
 
 function normalizeTelegramBaseUrl(value: string) {
   const normalized = value.trim();
@@ -41,8 +42,12 @@ export const TELEGRAM_OWNER_URL = normalizeTelegramBaseUrl(
     TELEGRAM_PUBLIC_URL,
 );
 export const TELEGRAM_CHECKOUT_URL = normalizeTelegramBaseUrl(
-  process.env.NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL?.trim() || TELEGRAM_PUBLIC_URL,
+  process.env.NEXT_PUBLIC_TELEGRAM_CHECKOUT_URL?.trim() ||
+    process.env.NEXT_PUBLIC_TELEGRAM_USERNAME?.trim() ||
+    DEFAULT_TELEGRAM_USERNAME,
 );
+export const TELEGRAM_CHECKOUT_USERNAME =
+  process.env.NEXT_PUBLIC_TELEGRAM_USERNAME?.trim() || DEFAULT_TELEGRAM_USERNAME;
 export const CURRENCY =
   process.env.NEXT_PUBLIC_DEFAULT_CURRENCY === "USD" ? "USD" : "USD";
 

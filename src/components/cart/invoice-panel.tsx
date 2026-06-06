@@ -1,805 +1,312 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ArrowRight,
-  ChevronDown,
-  ChevronLeft,
-  ChevronUp,
-  ReceiptText,
-  ScrollText,
-  Trash2,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import QRCode from "react-qr-code";
-import { InvoiceQr } from "@/components/cart/invoice-qr";
-import { OrderButton } from "@/components/cart/order-button";
-import { ShareInvoiceActions } from "@/components/cart/share-invoice-actions";
+import { MessageCircle, ShoppingCart, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+
+import { CartItemRow } from "@/components/cart/cart-item-row";
+import { CheckoutActions } from "@/components/cart/checkout-actions";
 import { CheckoutForm } from "@/components/cart/checkout-form";
+import { CheckoutMessagePreview } from "@/components/cart/checkout-message-preview";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useLocale } from "@/components/locale/locale-provider";
-import { TELEGRAM_CHECKOUT_URL } from "@/lib/constants";
 import {
+  clearCheckoutFormStorage,
   readCheckoutFormStorage,
   writeCheckoutFormStorage,
 } from "@/lib/cart-storage";
-import { formatCurrency } from "@/lib/currency";
 import {
-  formatItemCount,
-  getInvoiceItemTitle,
-  getUiText,
-} from "@/lib/i18n";
-import { buildInvoice, getCartCount } from "@/lib/invoice";
-import { formatInvoiceText, formatInvoiceTimestamp } from "@/lib/invoice-text";
-import type { Locale } from "@/lib/locale";
-import { encodeInvoiceQr } from "@/lib/qr";
-import { getTelegramTargetLabel } from "@/lib/telegram-order";
+  buildTelegramProfileUrl,
+  copyCheckoutMessage,
+  formatCheckoutMessage,
+  getCheckoutTotal,
+  validateCheckout,
+} from "@/lib/checkout";
+import { TELEGRAM_CHECKOUT_USERNAME } from "@/lib/constants";
+import { formatCurrency } from "@/lib/currency";
 import { useCartStore } from "@/store/cart-store";
-import type { Invoice } from "@/types/invoice";
-import type { OrderSource } from "@/types/order";
 
-interface InvoiceCardProps {
-  exportTargetId: string;
-  hasHydrated: boolean;
-  invoice: Invoice | null;
-  totalCount: number;
-  clearCart: () => void;
-  locale: Locale;
-  reviewOpen: boolean;
-  orderSource: OrderSource;
-  customerName: string;
-  customerPhone: string;
-  note: string;
-  fulfillmentMethod: "pickup" | "delivery" | "";
-  onCustomerNameChange: (value: string) => void;
-  onCustomerPhoneChange: (value: string) => void;
-  onNoteChange: (value: string) => void;
-  onFulfillmentMethodChange: (value: "pickup" | "delivery") => void;
-  onOpenReview: () => void;
-  onBackToAdjustItems: () => void;
-  stickyActions?: boolean;
-}
-
-interface InvoicePaperPreviewProps {
-  invoice: Invoice;
-  locale: Locale;
-}
-
-interface InvoicePaperDocumentProps {
-  id?: string;
-  invoice: Invoice;
-  locale: Locale;
-  className?: string;
-  variant?: "preview" | "export";
-}
-
-function InvoicePaperDocument({
-  id,
-  invoice,
-  locale,
-  className,
-  variant = "preview",
-}: InvoicePaperDocumentProps) {
-  const ui = getUiText(locale);
-  const copy = ui.invoice;
-  const cartCopy = ui.cart;
-  const targetLabel = getTelegramTargetLabel(invoice.telegramUrl);
-  const isExport = variant === "export";
-
-  if (isExport) {
-    const qrPayload = encodeInvoiceQr(invoice);
-
-    return (
-      <div
-        id={id}
-        className={`rounded-[2rem] border border-neutral-200 bg-white p-7 text-neutral-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)] ${className ?? ""}`}
-      >
-        <div className="border-b border-neutral-200 pb-5">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-lime-700">
-            {invoice.shop}
-          </p>
-
-          <div className="mt-4 flex items-start justify-between gap-4">
-            <div>
-              <h4 className="text-[2.25rem] font-bold tracking-tight text-neutral-950">
-                {copy.invoice}
-              </h4>
-              <p className="mt-2 text-sm text-neutral-500">{copy.orderSummary}</p>
-            </div>
-
-            <div className="text-right">
-              <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                {copy.total}
-              </p>
-              <p className="mt-2 text-2xl font-bold text-neutral-950">
-                {formatCurrency(invoice.total)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-4">
-              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                {copy.invoiceId}
-              </span>
-              <span className="max-w-[420px] text-right font-semibold text-neutral-950">
-                {invoice.invoiceId}
-              </span>
-            </div>
-
-            <div className="flex items-start justify-between gap-4">
-              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                {copy.created}
-              </span>
-              <span className="text-right font-medium text-neutral-950">
-                {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
-              </span>
-            </div>
-
-            <div className="flex items-start justify-between gap-4">
-              <span className="locale-label font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                {copy.checkoutTarget}
-              </span>
-              <span className="text-right font-semibold text-neutral-950">{targetLabel}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-          <div className="flex items-center justify-between border-b border-neutral-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-            <span>{copy.items}</span>
-            <span>{cartCopy.qtyShort}</span>
-          </div>
-
-          <div className="divide-y divide-neutral-200">
-            {invoice.items.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-4 py-4">
-                <div>
-                  <p className="text-base font-semibold text-neutral-950">
-                    {getInvoiceItemTitle(item, locale)}
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    {item.qty} x {formatCurrency(item.price)}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-400">{item.id}</p>
-                </div>
-
-                <div className="text-right text-sm font-semibold text-neutral-950">
-                  {formatCurrency(item.lineTotal)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-          <div className="flex items-center justify-between text-sm text-neutral-500">
-            <span>{copy.subtotal}</span>
-            <span>{formatCurrency(invoice.subtotal)}</span>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-lg font-bold text-neutral-950">
-            <span>{copy.total}</span>
-            <span>{formatCurrency(invoice.total)}</span>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-5">
-          <div className="flex flex-col items-center text-center">
-            <div className="rounded-[1.25rem] border border-neutral-200 bg-white p-4">
-              <QRCode value={qrPayload} size={150} />
-            </div>
-
-            <p className="mt-4 text-sm font-semibold text-neutral-950">{copy.scanOrShare}</p>
-            <p className="mt-2 text-xs text-neutral-500">
-              {invoice.currency} {invoice.total.toFixed(2)}
-            </p>
-            <p className="mt-3 max-w-[420px] break-all text-xs text-neutral-400">
-              {invoice.invoiceId}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 text-xs text-neutral-500">
-          {copy.telegram}: {targetLabel}
-        </div>
-      </div>
-    );
-  }
-
-  const detailsGridClassName = "mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]";
-  const itemHeaderClassName =
-    "hidden grid-cols-[minmax(0,1fr)_72px_140px_140px] items-center gap-3 border-b border-neutral-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500 sm:grid";
-  const itemRowClassName =
-    "grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_72px_140px_140px] sm:items-center";
-
-  return (
-    <div
-      id={id}
-      className={`rounded-[2rem] border border-neutral-200 bg-white p-5 text-neutral-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)] sm:p-6 ${className ?? ""}`}
-    >
-      <div className="flex flex-col gap-5 border-b border-neutral-200 pb-5 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-lime-700">
-            {invoice.shop}
-          </p>
-          <h4 className="mt-2 text-2xl font-bold tracking-tight text-neutral-950 md:text-3xl">
-            {copy.invoice}
-          </h4>
-          <p className="mt-1 text-sm text-neutral-500">{copy.orderSummary}</p>
-        </div>
-
-        <div className="grid gap-3 text-sm text-neutral-600 md:min-w-[260px] md:text-right">
-          <div>
-            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-              {copy.invoiceId}
-            </p>
-            <p className="mt-1 font-semibold text-neutral-950">{invoice.invoiceId}</p>
-          </div>
-
-          <div>
-            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-              {copy.created}
-            </p>
-            <p className="mt-1 font-medium text-neutral-950">
-              {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className={detailsGridClassName}>
-        <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-          <div className={itemHeaderClassName}>
-            <span>{copy.items}</span>
-            <span className="text-center">{cartCopy.qtyShort}</span>
-            <span className="text-right">{copy.unitPrice}</span>
-            <span className="text-right">{copy.lineTotal}</span>
-          </div>
-
-          <div className="divide-y divide-neutral-200">
-            {invoice.items.map((item) => (
-              <div key={item.id} className={itemRowClassName}>
-                <div>
-                  <p className="text-sm font-semibold text-neutral-950 md:text-base">
-                    {getInvoiceItemTitle(item, locale)}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">{item.id}</p>
-                </div>
-
-                <div className="flex items-center justify-between text-sm font-medium text-neutral-700 sm:block sm:text-center">
-                  <span
-                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
-                  >
-                    {cartCopy.qtyShort}
-                  </span>
-                  <span>{item.qty}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm font-medium text-neutral-700 sm:block sm:text-right">
-                  <span
-                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
-                  >
-                    {copy.unitPrice}
-                  </span>
-                  <span>{formatCurrency(item.price)}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm font-semibold text-neutral-950 sm:block sm:text-right">
-                  <span
-                    className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 sm:hidden"
-                  >
-                    {copy.lineTotal}
-                  </span>
-                  <span>{formatCurrency(item.lineTotal)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-            <p className="locale-label text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-              {copy.checkoutTarget}
-            </p>
-            <p className="mt-1 text-base font-semibold text-neutral-950">{targetLabel}</p>
-            <p className="mt-2 text-sm text-neutral-500">{copy.telegram}</p>
-          </div>
-
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-            <div className="flex items-center justify-between text-sm text-neutral-600">
-              <span>{copy.subtotal}</span>
-              <span>{formatCurrency(invoice.subtotal)}</span>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between text-lg font-bold text-neutral-950">
-              <span>{copy.total}</span>
-              <span>{formatCurrency(invoice.total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-        <InvoiceQr invoice={invoice} layout="responsive" />
-      </div>
-    </div>
-  );
-}
-
-function InvoicePaperPreview({ invoice, locale }: InvoicePaperPreviewProps) {
-  const copy = getUiText(locale).invoice;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="locale-label text-xs font-semibold uppercase text-app-primary">
-            {copy.imageInvoice}
-          </p>
-          <p className="mt-1 text-sm text-app-text-muted">
-            {copy.imageInvoiceDescription}
-          </p>
-        </div>
-
-        <div className="rounded-full border border-app-border bg-app-surface-2 px-4 py-2 text-sm font-semibold text-app-text">
-          {copy.total}: {formatCurrency(invoice.total)}
-        </div>
-      </div>
-
-      <InvoicePaperDocument invoice={invoice} locale={locale} />
-    </div>
-  );
-}
-
-function TextInvoicePreview({
-  invoice,
-  locale,
+function CartPanelBody({
+  phone,
+  fulfillmentType,
+  deliveryLocation,
+  pickupNote,
+  onPhoneChange,
+  onFulfillmentTypeChange,
+  onDeliveryLocationChange,
+  onPickupNoteChange,
+  onClose,
 }: {
-  invoice: Invoice;
-  locale: Locale;
+  phone: string;
+  fulfillmentType: "delivery" | "pickup" | "";
+  deliveryLocation: string;
+  pickupNote: string;
+  onPhoneChange: (value: string) => void;
+  onFulfillmentTypeChange: (value: "delivery" | "pickup") => void;
+  onDeliveryLocationChange: (value: string) => void;
+  onPickupNoteChange: (value: string) => void;
+  onClose?: () => void;
 }) {
-  const copy = getUiText(locale).invoice;
-  const invoiceText = useMemo(() => formatInvoiceText(invoice, locale), [invoice, locale]);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-3">
-        <div className="mt-1 rounded-full border border-app-border bg-app-surface-2 p-2 text-app-primary">
-          <ScrollText className="size-4" />
-        </div>
-        <div>
-          <p className="locale-label text-xs font-semibold uppercase text-app-primary">
-            {copy.textInvoice}
-          </p>
-          <p className="mt-1 text-sm text-app-text-muted">
-            {copy.textInvoiceDescription}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-[1.5rem] border border-app-border bg-app-surface-2 p-4">
-        <pre className="eco-scrollbar max-h-[240px] overflow-auto whitespace-pre-wrap font-mono text-xs leading-6 text-app-text-soft sm:text-[13px]">
-          {invoiceText}
-        </pre>
-      </div>
-    </div>
+  const items = useCartStore((state) => state.items);
+  const updateQty = useCartStore((state) => state.updateQty);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const total = useMemo(() => getCheckoutTotal(items), [items]);
+  const message = useMemo(
+    () =>
+      formatCheckoutMessage(items, {
+        phone,
+        fulfillmentType,
+        deliveryLocation,
+        pickupNote,
+      }),
+    [deliveryLocation, fulfillmentType, items, phone, pickupNote],
   );
-}
+  const validation = useMemo(
+    () =>
+      validateCheckout(items, {
+        phone,
+        fulfillmentType,
+        deliveryLocation,
+        pickupNote,
+      }),
+    [deliveryLocation, fulfillmentType, items, phone, pickupNote],
+  );
 
-function InvoiceCard({
-  exportTargetId,
-  hasHydrated,
-  invoice,
-  totalCount,
-  clearCart,
-  locale,
-  reviewOpen,
-  orderSource,
-  customerName,
-  customerPhone,
-  note,
-  fulfillmentMethod,
-  onCustomerNameChange,
-  onCustomerPhoneChange,
-  onNoteChange,
-  onFulfillmentMethodChange,
-  onOpenReview,
-  onBackToAdjustItems,
-  stickyActions = false,
-}: InvoiceCardProps) {
-  const copy = getUiText(locale).invoice;
-  const orderingCopy = getUiText(locale).ordering;
-  const hasItems = Boolean(invoice && invoice.items.length > 0);
-  const [textInvoiceOpen, setTextInvoiceOpen] = useState(false);
+  async function handleCopyMessage() {
+    await copyCheckoutMessage(message);
+  }
 
-  if (!hasHydrated) {
-    return (
-      <div className="rounded-[32px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="h-4 w-20 animate-pulse rounded-full bg-app-surface-3" />
-              <div className="h-8 w-52 animate-pulse rounded-full bg-app-surface-3" />
-              <div className="h-4 w-64 animate-pulse rounded-full bg-app-surface-3" />
-            </div>
-            <div className="h-16 w-28 animate-pulse rounded-[1rem] bg-app-surface-3" />
-          </div>
-          <div className="h-80 animate-pulse rounded-[1.75rem] bg-app-surface-2" />
-          <div className="h-44 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
-          <div className="h-40 animate-pulse rounded-[1.5rem] bg-app-surface-2" />
-        </div>
-      </div>
+  async function handleOpenTelegram() {
+    window.open(
+      buildTelegramProfileUrl(TELEGRAM_CHECKOUT_USERNAME, message),
+      "_blank",
+      "noopener,noreferrer",
     );
   }
 
   return (
-    <div className="rounded-[32px] border border-app-border bg-app-surface p-5 shadow-[var(--app-shadow-panel)] backdrop-blur xl:p-6">
-      <div className="space-y-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-4">
+      <div className="rounded-[1.6rem] border border-app-border bg-app-surface p-4">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="locale-label text-xs font-semibold uppercase text-app-primary">
-              {reviewOpen ? copy.invoice : copy.checkoutReady}
-            </p>
-            <h3 className="mt-1 text-2xl font-bold text-app-text xl:text-3xl">
-              {reviewOpen ? copy.orderSummary : copy.checkoutReady}
-            </h3>
-            <p className="mt-1 max-w-xl text-sm text-app-text-muted">
-              {reviewOpen ? copy.reviewDescription : copy.checkoutDescription}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[220px]">
-            <div className="rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3">
-              <div className="locale-label text-[11px] font-medium uppercase text-app-text-faint">
-                {copy.items}
-              </div>
-              <div className="mt-1 text-xl font-bold text-app-text">{totalCount}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">
+              Cart total
             </div>
-
-            <div className="rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3">
-              <div className="locale-label text-[11px] font-medium uppercase text-app-text-faint">
-                {copy.total}
-              </div>
-              <div className="mt-1 text-xl font-bold text-app-text">
-                {formatCurrency(invoice?.total ?? 0)}
-              </div>
-            </div>
+            <div className="mt-1 text-2xl font-bold text-app-text">{formatCurrency(total)}</div>
           </div>
+          <Button type="button" variant="destructive" size="sm" onClick={() => { clearCart(); clearCheckoutFormStorage(); }}>
+            <Trash2 className="size-4" />
+            Clear
+          </Button>
         </div>
-
-        {hasItems && invoice ? (
-          <>
-            <div className="pointer-events-none fixed left-[-200vw] top-0 z-[-1] opacity-100" aria-hidden="true">
-              <InvoicePaperDocument
-                id={exportTargetId}
-                invoice={invoice}
-                locale={locale}
-                className="w-[820px]"
-                variant="export"
-              />
-            </div>
-
-            {reviewOpen ? (
-              <>
-                {/* Step indicator */}
-                <div className="flex items-center gap-0">
-                  {[
-                    { label: copy.checkoutStep1, step: 1 },
-                    { label: copy.checkoutStep2, step: 2 },
-                    { label: copy.checkoutStep3, step: 3 },
-                  ].map(({ label, step }, index) => (
-                    <div key={step} className="flex items-center">
-                      <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                        step === 2
-                          ? "bg-app-primary text-app-bg"
-                          : "text-app-text-faint"
-                      }`}>
-                        <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold ${
-                          step === 2 ? "bg-white/20 text-white" : "bg-app-surface-3 text-app-text-faint"
-                        }`}>
-                          {step}
-                        </span>
-                        {label}
-                      </div>
-                      {index < 2 && (
-                        <div className="mx-1 h-px w-4 bg-app-border" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onBackToAdjustItems}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-app-text-muted transition hover:text-app-text"
-                >
-                  <ChevronLeft className="size-4" />
-                  {copy.backToAdjustItems}
-                </button>
-
-                <CheckoutForm
-                  customerName={customerName}
-                  customerPhone={customerPhone}
-                  note={note}
-                  fulfillmentMethod={fulfillmentMethod}
-                  onCustomerNameChange={onCustomerNameChange}
-                  onCustomerPhoneChange={onCustomerPhoneChange}
-                  onNoteChange={onNoteChange}
-                  onFulfillmentMethodChange={onFulfillmentMethodChange}
-                />
-
-                <InvoicePaperPreview
-                  invoice={invoice}
-                  locale={locale}
-                />
-
-                {/* Collapsible text invoice */}
-                <div className="rounded-[1.5rem] border border-app-border bg-app-surface-2 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setTextInvoiceOpen((v) => !v)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-app-text-muted hover:text-app-text transition"
-                  >
-                    <span className="flex items-center gap-2">
-                      <ScrollText className="size-4" />
-                      {copy.textInvoice}
-                    </span>
-                    <ChevronDown className={`size-4 transition-transform ${textInvoiceOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {textInvoiceOpen && (
-                    <div className="border-t border-app-border">
-                      <TextInvoicePreview invoice={invoice} locale={locale} />
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="rounded-[1.75rem] border border-app-border bg-app-surface-2 p-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
-                    <p className="locale-label text-[11px] font-semibold uppercase text-app-text-faint">
-                      {copy.invoiceId}
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-app-text">
-                      {invoice.invoiceId}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
-                    <p className="locale-label text-[11px] font-semibold uppercase text-app-text-faint">
-                      {copy.checkoutTarget}
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-app-text">
-                      {getTelegramTargetLabel(invoice.telegramUrl)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-[1.25rem] border border-app-border bg-app-surface px-4 py-4">
-                  <div className="flex items-center justify-between text-sm text-app-text-muted">
-                    <span>{copy.created}</span>
-                    <span className="text-right text-app-text">
-                      {formatInvoiceTimestamp(invoice.createdAtIso, locale)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="rounded-[1.75rem] border border-dashed border-app-border bg-app-bg-soft px-5 py-10 text-center">
-            <div className="mx-auto flex max-w-md flex-col items-center">
-              <div className="rounded-full border border-app-border bg-app-surface-2 p-3 text-app-primary">
-                <ReceiptText className="size-5" />
-              </div>
-              <p className="mt-4 text-lg font-semibold text-app-text">{copy.emptyTitle}</p>
-              <p className="mt-2 text-sm leading-6 text-app-text-muted">
-                {copy.emptyDescription}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div
-        className={
-          stickyActions
-            ? "sticky bottom-0 mt-5 -mx-5 bg-app-surface px-5 pb-3 pt-3 backdrop-blur xl:-mx-6 xl:px-6"
-            : "mt-5"
-        }
-      >
-        {reviewOpen ? (
-          <>
-            <OrderButton
-              invoice={invoice}
-              source={orderSource}
-              customerName={customerName}
-              customerPhone={customerPhone}
-              note={note}
-              fulfillmentMethod={fulfillmentMethod}
-              className="mb-4"
-            />
-
-            <ShareInvoiceActions
-              invoice={invoice}
-              disabled={!hasItems}
-              exportTargetId={exportTargetId}
-            />
-
-            <button
-              type="button"
-              onClick={clearCart}
-              disabled={!hasItems}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-danger bg-app-danger-soft px-4 py-3 text-sm font-semibold text-app-danger transition hover:bg-app-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              {copy.clearInvoice}
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenReview}
-            disabled={!hasItems}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-app-primary bg-app-primary px-4 py-3 text-sm font-semibold text-app-bg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {orderingCopy.reviewOrder}
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        )}
+      <div className="space-y-3">
+        {items.map((item) => (
+          <CartItemRow
+            key={item.lineId}
+            item={item}
+            onIncrease={() => updateQty(item.lineId, item.qty + 1)}
+            onDecrease={() => updateQty(item.lineId, item.qty - 1)}
+            onRemove={() => removeItem(item.lineId)}
+          />
+        ))}
       </div>
+
+      <CheckoutForm
+        phone={phone}
+        fulfillmentType={fulfillmentType}
+        deliveryLocation={deliveryLocation}
+        pickupNote={pickupNote}
+        onPhoneChange={onPhoneChange}
+        onFulfillmentTypeChange={onFulfillmentTypeChange}
+        onDeliveryLocationChange={onDeliveryLocationChange}
+        onPickupNoteChange={onPickupNoteChange}
+        errors={validation.errors}
+      />
+
+      <CheckoutMessagePreview message={message} />
+
+      <CheckoutActions
+        onCopyMessage={handleCopyMessage}
+        onOpenTelegram={handleOpenTelegram}
+        disabled={!validation.isValid}
+      />
+
+      {!validation.isValid ? (
+        <p className="text-xs text-app-text-muted">
+          Complete phone and fulfillment info before copying the checkout message.
+        </p>
+      ) : null}
+
+      {onClose ? (
+        <Button type="button" variant="ghost" className="w-full" onClick={onClose}>
+          Close
+        </Button>
+      ) : null}
     </div>
   );
 }
 
 export function InvoicePanel() {
-  const { locale } = useLocale();
-  const copy = getUiText(locale).invoice;
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [note, setNote] = useState("");
-  const [fulfillmentMethod, setFulfillmentMethod] = useState<"pickup" | "delivery" | "">("");
-  const [hasLoadedStorage, setHasLoadedStorage] = useState(false);
   const items = useCartStore((state) => state.items);
-  const invoiceMeta = useCartStore((state) => state.invoiceMeta);
-  const orderSource = useCartStore((state) => state.orderSource);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
-  const clearCart = useCartStore((state) => state.clearCart);
+  const isCartOpen = useCartStore((state) => state.isCartOpen);
+  const openCart = useCartStore((state) => state.openCart);
+  const closeCart = useCartStore((state) => state.closeCart);
+  const [storedForm] = useState(() => readCheckoutFormStorage());
+  const [phone, setPhone] = useState(storedForm.phone);
+  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup" | "">(
+    storedForm.fulfillmentType,
+  );
+  const [deliveryLocation, setDeliveryLocation] = useState(storedForm.deliveryLocation);
+  const [pickupNote, setPickupNote] = useState(storedForm.pickupNote);
 
-  // Load form state from localStorage on mount
-  useEffect(() => {
-    const stored = readCheckoutFormStorage();
-    setCustomerName(stored.customerName);
-    setCustomerPhone(stored.customerPhone);
-    setNote(stored.note);
-    setFulfillmentMethod(stored.fulfillmentMethod);
-    setHasLoadedStorage(true);
-  }, []);
+  const count = items.reduce((total, item) => total + item.qty, 0);
+  const total = getCheckoutTotal(items);
 
-  // Persist form state to localStorage whenever it changes
-  useEffect(() => {
-    if (!hasLoadedStorage) {
-      return;
-    }
+  function handlePhoneChange(value: string) {
+    setPhone(value);
     writeCheckoutFormStorage({
-      customerName,
-      customerPhone,
-      note,
-      fulfillmentMethod,
+      phone: value,
+      fulfillmentType,
+      deliveryLocation,
+      pickupNote,
     });
-  }, [customerName, customerPhone, note, fulfillmentMethod, hasLoadedStorage]);
+  }
 
-  const invoice = useMemo(() => buildInvoice(items, invoiceMeta), [items, invoiceMeta]);
-  const totalCount = getCartCount(items);
-  const mobileTotal = formatCurrency(invoice?.total ?? 0);
-  const reviewVisible = reviewOpen && items.length > 0;
-  const canSubmitOrder = Boolean(invoice && customerPhone.trim() && fulfillmentMethod);
+  function handleFulfillmentTypeChange(value: "delivery" | "pickup") {
+    setFulfillmentType(value);
+    const nextPickupNote = value === "pickup" ? pickupNote || "Pickup at shop" : pickupNote;
+    const nextDeliveryLocation = value === "delivery" ? deliveryLocation : "";
+    setPickupNote(nextPickupNote);
+    setDeliveryLocation(nextDeliveryLocation);
+    writeCheckoutFormStorage({
+      phone,
+      fulfillmentType: value,
+      deliveryLocation: nextDeliveryLocation,
+      pickupNote: nextPickupNote,
+    });
+  }
+
+  function handleDeliveryLocationChange(value: string) {
+    setDeliveryLocation(value);
+    writeCheckoutFormStorage({
+      phone,
+      fulfillmentType,
+      deliveryLocation: value,
+      pickupNote,
+    });
+  }
+
+  function handlePickupNoteChange(value: string) {
+    setPickupNote(value);
+    writeCheckoutFormStorage({
+      phone,
+      fulfillmentType,
+      deliveryLocation,
+      pickupNote: value,
+    });
+  }
+
+  if (!hasHydrated) {
+    return null;
+  }
 
   return (
     <>
       <div className="hidden lg:block">
-        <InvoiceCard
-          exportTargetId="invoice-image-export-desktop"
-          hasHydrated={hasHydrated}
-          invoice={invoice}
-          totalCount={totalCount}
-          clearCart={clearCart}
-          locale={locale}
-          reviewOpen={reviewVisible}
-          orderSource={orderSource}
-          customerName={customerName}
-          customerPhone={customerPhone}
-          note={note}
-          fulfillmentMethod={fulfillmentMethod}
-          onCustomerNameChange={setCustomerName}
-          onCustomerPhoneChange={setCustomerPhone}
-          onNoteChange={setNote}
-          onFulfillmentMethodChange={setFulfillmentMethod}
-          onOpenReview={() => setReviewOpen(true)}
-          onBackToAdjustItems={() => setReviewOpen(false)}
-        />
+        <div className="rounded-[1.8rem] border border-app-border bg-app-surface p-4 shadow-[var(--app-shadow-panel)]">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-app-primary-soft text-app-primary">
+              <ShoppingCart className="size-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-app-text">Checkout</div>
+              <div className="text-xs text-app-text-muted">
+                {count} items · {formatCurrency(total)}
+              </div>
+            </div>
+          </div>
+
+          {items.length === 0 ? (
+            <div className="rounded-[1.4rem] border border-dashed border-app-border bg-app-surface-2 p-6 text-sm text-app-text-muted">
+              Add products to build a Telegram checkout message.
+            </div>
+          ) : (
+            <CartPanelBody
+              phone={phone}
+              fulfillmentType={fulfillmentType}
+              deliveryLocation={deliveryLocation}
+              pickupNote={pickupNote}
+              onPhoneChange={handlePhoneChange}
+              onFulfillmentTypeChange={handleFulfillmentTypeChange}
+              onDeliveryLocationChange={handleDeliveryLocationChange}
+              onPickupNoteChange={handlePickupNoteChange}
+            />
+          )}
+        </div>
       </div>
 
       <div className="lg:hidden">
-        <div className="hide-on-print fixed inset-x-0 bottom-0 z-40 border-t border-app-border bg-app-bg-soft p-3 backdrop-blur supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-app-border bg-app-bg-soft/96 p-3 backdrop-blur">
           <button
             type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl border border-app-border bg-app-surface-2 px-4 py-3 text-left"
+            onClick={openCart}
+            className="flex w-full items-center justify-between rounded-[1.4rem] border border-app-border bg-app-surface px-4 py-3 text-left"
           >
-            <div>
-              <p className="locale-label text-[11px] font-semibold uppercase text-app-primary">
-                {copy.invoice}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-app-text">
-                {hasHydrated
-                  ? `${formatItemCount(totalCount, locale)} · ${mobileTotal}`
-                  : copy.mobileLoading}
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-app-primary-soft text-app-primary">
+                <ShoppingCart className="size-4.5" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-app-text">Cart & Checkout</div>
+                <div className="text-xs text-app-text-muted">
+                  {count} items · {formatCurrency(total)}
+                </div>
+              </div>
             </div>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-app-text">
-              {copy.open}
-              <ChevronUp className="h-4 w-4" />
-            </span>
+            <div className="flex size-10 items-center justify-center rounded-full bg-app-surface-2 text-app-text">
+              <MessageCircle className="size-4" />
+            </div>
           </button>
         </div>
 
         <AnimatePresence>
-          {mobileOpen ? (
+          {isCartOpen ? (
             <>
               <motion.div
                 className="fixed inset-0 z-50 bg-app-overlay"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setMobileOpen(false)}
+                onClick={closeCart}
               />
-
               <motion.div
-                className="fixed inset-x-0 bottom-0 z-[60] max-h-[85vh] overflow-auto rounded-t-[32px] border-t border-app-border bg-app-surface p-4 pb-8"
+                className="fixed inset-x-0 bottom-0 z-[60] max-h-[88vh] overflow-auto rounded-t-[2rem] border-t border-app-border bg-app-surface p-4 pb-8"
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                transition={{ type: "spring", stiffness: 280, damping: 28 }}
+                transition={{ type: "spring", stiffness: 280, damping: 30 }}
               >
                 <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-app-surface-3" />
-                <InvoiceCard
-                  exportTargetId="invoice-image-export-mobile"
-                  hasHydrated={hasHydrated}
-                  invoice={invoice}
-                  totalCount={totalCount}
-                  clearCart={clearCart}
-                  locale={locale}
-                  reviewOpen={reviewVisible}
-                  orderSource={orderSource}
-                  customerName={customerName}
-                  customerPhone={customerPhone}
-                  note={note}
-                  fulfillmentMethod={fulfillmentMethod}
-                  onCustomerNameChange={setCustomerName}
-                  onCustomerPhoneChange={setCustomerPhone}
-                  onNoteChange={setNote}
-                  onFulfillmentMethodChange={setFulfillmentMethod}
-                  onOpenReview={() => setReviewOpen(true)}
-                  onBackToAdjustItems={() => setReviewOpen(false)}
-                  stickyActions
-                />
-                {!invoice ? (
-                  <a
-                    href={TELEGRAM_CHECKOUT_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-app-primary bg-app-primary-soft px-4 py-3 text-sm font-semibold text-app-primary transition hover:bg-app-surface-3"
-                  >
-                    {copy.openTelegram}
-                  </a>
-                ) : null}
+                {items.length === 0 ? (
+                  <div className="rounded-[1.4rem] border border-dashed border-app-border bg-app-surface-2 p-6 text-sm text-app-text-muted">
+                    Add products to build a Telegram checkout message.
+                  </div>
+                ) : (
+                  <CartPanelBody
+                    phone={phone}
+                    fulfillmentType={fulfillmentType}
+                    deliveryLocation={deliveryLocation}
+                    pickupNote={pickupNote}
+                    onPhoneChange={handlePhoneChange}
+                    onFulfillmentTypeChange={handleFulfillmentTypeChange}
+                    onDeliveryLocationChange={handleDeliveryLocationChange}
+                    onPickupNoteChange={handlePickupNoteChange}
+                    onClose={closeCart}
+                  />
+                )}
               </motion.div>
             </>
           ) : null}

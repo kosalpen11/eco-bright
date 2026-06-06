@@ -5,7 +5,7 @@ import { useLocale } from "@/components/locale/locale-provider";
 import { ProductImage } from "@/components/common/product-image";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
-import { getCartItemCategoryLabel, getCartItemTitle, getUiText } from "@/lib/i18n";
+import { getCartItemCategoryLabel, getUiText } from "@/lib/i18n";
 import type { CartItem } from "@/types/cart";
 
 interface CartItemRowProps {
@@ -23,8 +23,7 @@ export function CartItemRow({
 }: CartItemRowProps) {
   const { locale } = useLocale();
   const copy = getUiText(locale).cart;
-  const productCopy = getUiText(locale).product;
-  const title = getCartItemTitle(item, locale);
+  const title = item.variantTitle ? `${item.title} - ${item.variantTitle}` : item.title;
   const categoryLabel = getCartItemCategoryLabel(item, locale);
 
   return (
@@ -43,9 +42,7 @@ export function CartItemRow({
             {categoryLabel}
           </div>
           <div className="text-sm font-semibold leading-6">{title}</div>
-          <div className="text-sm text-muted-foreground">
-            {formatCurrency(item.price)} {productCopy.each}
-          </div>
+          <div className="text-sm text-muted-foreground">{formatCurrency(item.price)}</div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">

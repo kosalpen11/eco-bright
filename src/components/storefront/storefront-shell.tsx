@@ -9,6 +9,7 @@ import { ProductGrid } from "@/components/product/product-grid";
 import { ProductSearch } from "@/components/product/product-search";
 import { ProductToolbar } from "@/components/product/product-toolbar";
 import { PasteLinkForm } from "@/components/ordering/paste-link-form";
+import { buildCartLineId } from "@/lib/cart-storage";
 import { groupProducts } from "@/lib/group-products";
 import { formatItemCount, getGroupModeLabel, getSortModeLabel, getUiText } from "@/lib/i18n";
 import { searchProducts } from "@/lib/search-products";
@@ -18,6 +19,7 @@ import type {
   Product,
   ProductFilterValue,
   ProductGroupMode,
+  ProductCategory,
   ProductSortMode,
 } from "@/types/product";
 
@@ -178,7 +180,25 @@ export function StorefrontShell({
 
           <ProductGrid
             sections={groupedProducts}
-            onAddToCart={addItem}
+            onAddToCart={(product) =>
+              addItem({
+                lineId: buildCartLineId({
+                  productId: product.id,
+                  variantId: null,
+                }),
+                id: product.id,
+                productId: product.id,
+                variantId: null,
+                title: product.title,
+                titleKm: product.titleKm,
+                variantTitle: null,
+                category: product.category as ProductCategory,
+                categoryLabel: product.categoryLabel,
+                categoryLabelKm: product.categoryLabelKm,
+                imageUrl: product.imageUrl,
+                price: product.price,
+              })
+            }
             onResetFilters={resetCatalogView}
           />
 

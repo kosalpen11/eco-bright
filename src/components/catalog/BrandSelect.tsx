@@ -45,14 +45,14 @@ export function BrandSelect({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
+      <div className="text-xs font-medium uppercase tracking-wider text-[var(--app-text-muted)]">
         {copy.brand}
       </div>
       <select
         key={value}
         defaultValue={value}
         onChange={(e) => go(e.currentTarget.value)}
-        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-amber-700 focus:outline-none focus:ring-0"
+        className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] outline-none focus:border-[var(--app-primary)]"
       >
         <option value="all">{copy.allBrands}</option>
         {brands.map((b) => (

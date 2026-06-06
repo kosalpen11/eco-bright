@@ -90,7 +90,7 @@ export function PendingOrderCard({ order, onCopyOrder, className }: PendingOrder
 
         {/* Step hint */}
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+          <p className="text-xs font-semibold text-amber-600">
             {isKm
               ? "ជំហាន: ចុច Contact Sales → ជជែកជាមួយក្រុមលក់ → ដំណើរការបញ្ជាទិញ"
               : "Next steps: Tap Contact Sales → Chat with our team → We'll process your order"}

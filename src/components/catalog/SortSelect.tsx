@@ -49,7 +49,7 @@ export function SortSelect() {
       key={value}
       defaultValue={value}
       onChange={(e) => setSort(e.currentTarget.value as ProductSortMode)}
-      className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-amber-700 focus:outline-none focus:ring-0"
+      className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] outline-none focus:border-[var(--app-primary)]"
     >
       {OPTIONS.map((opt) => (
         <option key={opt.value} value={opt.value}>

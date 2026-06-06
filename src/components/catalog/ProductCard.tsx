@@ -1,363 +1,106 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AddToCartButton } from "@/components/catalog/AddToCartButton";
+import { getEffectiveOldPrice, getRatingLabel, optimizeImageUrl } from "@/components/catalog/catalog-helpers";
 import type { Locale } from "@/lib/locale";
-import type { Product } from "@/lib/types";
-import { CopyProductButton } from "@/components/catalog/CopyProductButton";
-import { TelegramOrderButton } from "@/components/catalog/TelegramOrderButton";
-import { getUiText, localizeText } from "@/lib/i18n";
+import { localizeText } from "@/lib/i18n";
+import {
+  getDisplayProductImage,
+  getDisplayProductPrice,
+  getPublicAvailabilityText,
+  type PublicProduct,
+} from "@/lib/public-products";
 
-function isAllowedImageUrl(url: string) {
-  if (url.startsWith("/")) return true;
-  if (!url.startsWith("http")) return false;
-
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function CategoryIcon({ category }: { category: string }) {
-  const common = "h-10 w-10 text-gray-400";
-
-  switch (category) {
-    case "led-tubes":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M4 7h16M4 17h16M7 7v10M17 7v10"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "panel-lights":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <rect
-            x="5"
-            y="6"
-            width="14"
-            height="12"
-            rx="2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M8 9h8M8 12h8M8 15h6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "ceiling-lights":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M12 4v3M7 10a5 5 0 0 1 10 0v2H7v-2Z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M9 14h6M10 17h4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "bulbs":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M9 21h6M10 18h4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M12 3a6 6 0 0 0-3.5 10.9c.7.6 1.2 1.3 1.3 2.1h4.4c.1-.8.6-1.5 1.3-2.1A6 6 0 0 0 12 3Z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case "emergency":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M12 3v7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M8.5 21h7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M9 14h6l-1 7H10l-1-7Z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case "string-lights":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M4 10c3 3 6-3 9 0s6-3 7 0"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M7 10v3M13 10v3M18 10v3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <circle cx="7" cy="15" r="1" fill="currentColor" />
-          <circle cx="13" cy="15" r="1" fill="currentColor" />
-          <circle cx="18" cy="15" r="1" fill="currentColor" />
-        </svg>
-      );
-    case "led-strips":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M6 7h12M6 12h12M6 17h12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M8 7v10M16 7v10"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "fans":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <circle
-            cx="12"
-            cy="12"
-            r="1.6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M12 3c2.5 0 3.8 3 2.2 4.8-1.1 1.2-1.4 2.2-1.2 3.2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M21 12c0 2.5-3 3.8-4.8 2.2-1.2-1.1-2.2-1.4-3.2-1.2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M12 21c-2.5 0-3.8-3-2.2-4.8 1.1-1.2 1.4-2.2 1.2-3.2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "wire-cable":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M7 7v5a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M7 7h4M13 7h4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "drivers":
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <rect
-            x="5"
-            y="8"
-            width="14"
-            height="8"
-            rx="2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M8 12h8"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    default:
-      return (
-        <svg viewBox="0 0 24 24" className={common} aria-hidden="true">
-          <path
-            d="M6 8h12v10H6V8Z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M9 8V6a3 3 0 0 1 6 0v2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-  }
-}
-
-function brandFromId(id: string) {
-  const idx = id.indexOf("_");
-  if (idx <= 0) return null;
-  const raw = id.slice(0, idx).trim();
-  if (!raw) return null;
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-export function ProductCard({ product, locale }: { product: Product; locale: Locale }) {
-  const copy = getUiText(locale).catalog;
-  const name = localizeText(locale, product.name, product.titleKm);
-  const useCase = localizeText(locale, product.useCase ?? "", product.useCaseKm) || "";
-  const formatter = new Intl.NumberFormat("en-US", {
+function formatCurrency(value: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: product.currency || "USD",
-  });
+    currency: currency || "USD",
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  }).format(value);
+}
 
-  const brand = brandFromId(product.id);
-
-  const primaryImage =
-    product.imageUrls?.[0] ??
-    (product.imageUrl ? product.imageUrl : null);
-
-  const imageUrl = primaryImage && isAllowedImageUrl(primaryImage) ? primaryImage : null;
+export function ProductCard({ product, locale }: { product: PublicProduct; locale: Locale }) {
+  const displayName = localizeText(locale, product.name, product.titleKm);
+  const image = getDisplayProductImage(product, product.variants);
+  const price = getDisplayProductPrice(product, product.variants);
+  const oldPrice = getEffectiveOldPrice(product, product.variants[0] ?? null);
+  const ratingLabel = getRatingLabel(product.rating);
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-colors hover:border-gray-300">
-      {/* ── Image / placeholder ── */}
-      <div className="relative flex h-40 items-center justify-center bg-gray-50">
-        {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 280px"
-          />
-        ) : (
-          <CategoryIcon category={product.category} />
-        )}
-
-        {brand && (
-          <div className="absolute left-3 top-3 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-            {brand}
-          </div>
-        )}
-      </div>
-
-      {/* ── Body ── */}
-      <div className="flex flex-1 flex-col p-4">
-        {/* Badges row — category shown once here, brand if present */}
-        <div className="flex flex-wrap items-center gap-2">
-          {brand && (
-            <div className="inline-flex rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600">
-              {brand}
+    <div className="flex h-full flex-col overflow-hidden rounded-[1.4rem] border border-[var(--app-border)] bg-white shadow-[var(--app-shadow-card)]">
+      <Link href={`/products/${product.id}`} className="group block">
+        <div className="relative aspect-[0.92] overflow-hidden bg-[var(--app-surface)]">
+          {image ? (
+            <Image
+              src={optimizeImageUrl(image, 640)}
+              alt={displayName}
+              fill
+              sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm font-medium text-[var(--app-text-faint)]">
+              ECO BRIGHT
             </div>
           )}
-        </div>
 
-        {/* Name */}
-        <div className="mt-3 text-sm font-medium leading-snug text-gray-900">
-          {name}
-        </div>
+          <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
+            {product.badge ? (
+              <span className="rounded-full bg-[var(--app-accent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text)]">
+                {product.badge}
+              </span>
+            ) : (
+              <span />
+            )}
 
-        {/* Use-case subtitle — keeps height stable when absent */}
-        <div className="mt-1 min-h-[1rem] text-xs text-gray-500">{useCase}</div>
-
-        {/* Price */}
-        <div className="mt-3 text-lg font-semibold text-amber-700">
-          {formatter.format(product.price)}{" "}
-          <span className="text-sm font-medium text-gray-500">/ unit</span>
-        </div>
-
-        {/* Push actions to bottom */}
-        <div className="mt-auto pt-4 space-y-2">
-          <Link
-            href={`/products/${product.id}`}
-            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:border-amber-700 hover:bg-amber-700 hover:text-white"
-          >
-            {copy.viewDetails}
-          </Link>
-
-          <TelegramOrderButton
-            productId={product.id}
-            productName={name}
-            priceText={`${formatter.format(product.price)} ${copy.eachUnit}`}
-            className="h-9 w-full rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
-          />
-
-          {/* Product ID + copy */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <div className="truncate text-xs text-gray-400">{product.id}</div>
-            <CopyProductButton
-              productId={product.id}
-              productName={name}
-              className="shrink-0 h-8 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-amber-700 hover:bg-amber-50 hover:text-amber-700"
-            />
+            {ratingLabel ? (
+              <span className="rounded-full border border-[var(--app-border)] bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text-soft)]">
+                {ratingLabel}
+              </span>
+            ) : null}
           </div>
+        </div>
+      </Link>
+
+      <div className="flex flex-1 flex-col p-3.5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--app-text-muted)]">
+          {product.categoryLabel}
+        </div>
+
+        <Link
+          href={`/products/${product.id}`}
+          className="mt-2 line-clamp-2 min-h-[2.75rem] text-sm font-semibold leading-5 text-[var(--app-text)]"
+        >
+          {displayName}
+        </Link>
+
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <div>
+            <div className="text-base font-bold text-[var(--app-primary)] sm:text-lg">
+              {product.variants.length > 0
+                ? `From ${formatCurrency(price, product.currency)}`
+                : formatCurrency(price, product.currency)}
+            </div>
+            {oldPrice && oldPrice > price ? (
+              <div className="text-xs text-[var(--app-text-faint)] line-through">
+                {formatCurrency(oldPrice, product.currency)}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-2 text-xs font-medium text-[var(--app-text-muted)]">
+          {getPublicAvailabilityText(product.available)}
+        </div>
+
+        <div className="mt-auto pt-4">
+          <AddToCartButton
+            product={product}
+            imageUrl={image}
+            price={price}
+            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-[var(--app-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--app-primary-hover)]"
+          />
         </div>
       </div>
     </div>

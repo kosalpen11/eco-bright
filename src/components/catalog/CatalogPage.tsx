@@ -1,6 +1,9 @@
 import Image from "next/image";
+import Link from "next/link";
+import { MessageCircle, SlidersHorizontal, X } from "lucide-react";
 
 import { BrandSelect } from "@/components/catalog/BrandSelect";
+import { CatalogCartRail } from "@/components/catalog/CatalogCartRail";
 import { CategoryBar } from "@/components/catalog/CategoryBar";
 import { Pagination } from "@/components/catalog/Pagination";
 import { PriceRangeFilter } from "@/components/catalog/PriceRangeFilter";
@@ -8,27 +11,14 @@ import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { SearchInput } from "@/components/catalog/SearchInput";
 import { SortSelect } from "@/components/catalog/SortSelect";
 import { getBrands, getCategories, getProducts } from "@/lib/db/products";
-import { MARQUEE_ITEMS, TELEGRAM_OWNER_URL } from "@/lib/constants";
-import { getUiText } from "@/lib/i18n";
+import { TELEGRAM_OWNER_URL } from "@/lib/constants";
 import { getRequestLocale } from "@/lib/locale-server";
+import { getActiveProducts, mapProductToPublicProduct } from "@/lib/public-products";
 import type { ProductCategory, ProductFilters, ProductSortMode } from "@/lib/types";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 const SORT_MODES = ["default", "price-asc", "price-desc", "name-asc"] as const satisfies ReadonlyArray<ProductSortMode>;
-
-const CATEGORY_PILLS = [
-  { id: "led-tubes", label: "LED Tubes" },
-  { id: "panel-lights", label: "Panel Lights" },
-  { id: "ceiling-lights", label: "Ceiling Lights" },
-  { id: "bulbs", label: "Bulbs" },
-  { id: "emergency", label: "Emergency" },
-  { id: "string-lights", label: "String Lights" },
-  { id: "led-strips", label: "LED Strips" },
-  { id: "fans", label: "Fans" },
-  { id: "wire-cable", label: "Wire / Cable" },
-  { id: "drivers", label: "Drivers" },
-] as const satisfies ReadonlyArray<{ id: string; label: string }>;
 
 function firstValue(value: string | string[] | undefined): string | null {
   if (!value) return null;
@@ -48,16 +38,52 @@ function parseSort(value: string | null): ProductSortMode | null {
 }
 
 function buildCategoryPills(dbCategories: ProductCategory[], allCount: number): ProductCategory[] {
-  const counts = new Map(dbCategories.map((c) => [c.id, c.count]));
+  return [{ id: "all", label: "All", count: allCount }, ...dbCategories];
+}
 
-  return [
-    { id: "all", label: "All Products", count: allCount },
-    ...CATEGORY_PILLS.map((pill) => ({
-      id: pill.id,
-      label: pill.label,
-      count: counts.get(pill.id) ?? 0,
-    })),
-  ];
+function buildBrowseTitle(params: {
+  brand?: string | null;
+  category?: string | null;
+  query?: string | null;
+  total: number;
+}) {
+  if (params.query) {
+    return {
+      eyebrow: "Search results",
+      title: `Results for "${params.query}"`,
+      subtitle: `${params.total} products matched your search.`,
+    };
+  }
+
+  if (params.category) {
+    return {
+      eyebrow: "Category",
+      title: params.category,
+      subtitle: `${params.total} products ready to browse.`,
+    };
+  }
+
+  if (params.brand) {
+    return {
+      eyebrow: "Brand collection",
+      title: params.brand,
+      subtitle: `${params.total} products in this brand catalog.`,
+    };
+  }
+
+  return {
+    eyebrow: "Eco Bright catalog",
+      title: "Browse products",
+      subtitle: `${params.total} products available.`,
+  };
+}
+
+function buildBaseCatalogPath(brand?: string | null) {
+  return brand?.trim() ? `/catalog/${encodeURIComponent(brand.trim())}` : "/products";
+}
+
+function buildClearFiltersHref(brand?: string | null) {
+  return buildBaseCatalogPath(brand);
 }
 
 export async function CatalogPage({
@@ -68,19 +94,14 @@ export async function CatalogPage({
   brand?: string | null;
 }) {
   const locale = await getRequestLocale();
-  const copy = getUiText(locale).catalog;
-
   const sp = await searchParams;
 
   const categoryParam = (firstValue(sp.category) ?? "").trim();
   const category = categoryParam && categoryParam !== "all" ? categoryParam : null;
-
   const q = (firstValue(sp.q) ?? "").trim() || null;
   const sort = parseSort(firstValue(sp.sort)) ?? "default";
-
   const pageRaw = firstValue(sp.page);
   const page = Math.max(1, Number.isFinite(Number(pageRaw)) ? Math.floor(Number(pageRaw)) : 1);
-
   const minPrice = parsePositiveNumber(firstValue(sp.minPrice));
   const maxPrice = parsePositiveNumber(firstValue(sp.maxPrice));
 
@@ -101,131 +122,144 @@ export async function CatalogPage({
       getBrands(),
     ]);
 
-  const allCount = dbCategories.reduce((acc, c) => acc + c.count, 0);
+  const allCount = dbCategories.reduce((acc, item) => acc + item.count, 0);
   const categories = buildCategoryPills(dbCategories, allCount);
-  const marqueeItems = [
-    ...brands.slice(0, 6).map((b) => b.label),
-    ...MARQUEE_ITEMS,
-  ].filter(Boolean);
-  const uniqueMarqueeItems = Array.from(new Set(marqueeItems)).slice(0, 16);
+  const activeProducts = getActiveProducts(products);
+  const publicProducts = activeProducts.map(mapProductToPublicProduct);
+  const hero = buildBrowseTitle({
+    brand: filters.brand,
+    category: categories.find((item) => item.id === category)?.label ?? category,
+    query: q,
+    total,
+  });
+  const activeFilterChips = [
+    q ? { label: `Search: ${q}` } : null,
+    category ? { label: `Category: ${hero.title === category ? category : hero.title}` } : null,
+    filters.brand ? { label: `Brand: ${filters.brand}` } : null,
+    minPrice !== null ? { label: `Min: $${minPrice}` } : null,
+    maxPrice !== null ? { label: `Max: $${maxPrice}` } : null,
+    sort !== "default" ? { label: `Sort: ${sort}` } : null,
+  ].filter((item): item is { label: string } => Boolean(item));
+  const hasActiveFilters = activeFilterChips.length > 0;
+  const clearFiltersHref = buildClearFiltersHref(filters.brand);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="sticky top-0 z-30 border-b border-gray-100 bg-white">
-        <div className="border-b border-gray-100 bg-gray-50">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-end px-4 py-2">
-            <a
-              href={TELEGRAM_OWNER_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-amber-700"
-              aria-label={copy.contactSales}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                aria-hidden="true"
-                fill="currentColor"
-              >
-                <path d="M9.993 15.544 9.83 19.1c.35 0 .503-.15.686-.33l1.645-1.57 3.41 2.496c.625.345 1.067.163 1.223-.577l2.216-10.39c.227-1.01-.37-1.404-.98-1.18L4.24 11.39c-.96.38-.946.925-.165 1.17l3.56 1.11 8.26-5.22c.39-.24.744-.11.452.13z" />
-              </svg>
-              {copy.contactSales}
-            </a>
-          </div>
-        </div>
-
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3">
-          <div className="min-w-[180px]">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/ecobright-logo.jpeg"
-                alt="EcoBright"
-                width={28}
-                height={28}
-                className="rounded"
-                priority
-              />
-              <div className="text-base font-semibold tracking-tight text-gray-900">
-                EcoBright
+    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
+      <header className="sticky top-0 z-40 border-b border-[var(--app-border)] bg-[rgba(248,250,247,0.94)] backdrop-blur">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-3 py-3 sm:px-4">
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/ecobright-logo.jpeg"
+              alt="Eco Bright"
+              width={34}
+              height={34}
+              className="rounded-xl"
+              priority
+            />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold tracking-[0.12em] text-[var(--app-text)] uppercase">
+                Eco Bright
               </div>
+              <div className="truncate text-[11px] text-[var(--app-text-muted)]">Lighting catalog</div>
             </div>
-            <div className="text-[11px] font-medium uppercase tracking-wider text-gray-500">
-              {copy.catalogSubtitle}
-            </div>
-          </div>
+          </Link>
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <SearchInput />
           </div>
 
-          <div className="min-w-[92px] text-right">
-            <div className="text-2xl font-semibold leading-none text-amber-700">
-              {total}
-            </div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-500">
-              {copy.productsLabel}
-            </div>
-          </div>
+          <a
+            href={TELEGRAM_OWNER_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-white text-[var(--app-primary)] shadow-sm"
+            aria-label="Contact Eco Bright"
+          >
+            <MessageCircle className="size-5" />
+          </a>
+        </div>
+
+        <div className="mx-auto w-full max-w-7xl px-3 pb-3 sm:px-4">
+          <CategoryBar categories={categories} activeCategory={categoryParam || "all"} />
         </div>
       </header>
 
-      <div className="border-b border-gray-100 bg-white">
-        <div className="mx-auto w-full max-w-6xl px-4 py-3">
-          <CategoryBar categories={categories} activeCategory={categoryParam || "all"} />
-        </div>
-      </div>
+      <main className="mx-auto grid w-full max-w-7xl gap-6 px-3 py-4 sm:px-4 sm:py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-4">
+        <section className="rounded-[1.6rem] border border-[var(--app-border)] bg-white p-4 shadow-[var(--app-shadow-surface)] sm:p-5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+                  <SlidersHorizontal className="size-4" />
+                  {hero.eyebrow}
+                </div>
+                <div className="mt-1 text-xl font-bold text-[var(--app-text)] sm:text-2xl">{hero.title}</div>
+                <div className="mt-2 text-sm text-[var(--app-text-muted)]">
+                  {hero.subtitle} Showing {publicProducts.length} on this page.
+                </div>
+              </div>
 
-      <div className="hide-on-print border-b border-gray-100 bg-white">
-        <div className="mx-auto w-full max-w-6xl px-4 py-3">
-          <div className="flex items-center gap-3">
-          <div className="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-800">
-              {copy.trending}
+              {hasActiveFilters ? (
+                <Link
+                  href={clearFiltersHref}
+                  className="inline-flex h-10 items-center justify-center gap-2 self-start rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 text-sm font-semibold text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-2)]"
+                >
+                  <X className="size-4" />
+                  Clear filters
+                </Link>
+              ) : null}
             </div>
 
-            <div className="group relative flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-              <div className="flex w-max min-w-full gap-3 [animation:marquee_30s_linear_infinite] group-hover:[animation-play-state:paused] will-change-transform">
-                {Array.from({ length: 2 }).flatMap((_, loop) =>
-                  uniqueMarqueeItems.map((item) => (
-                    <div
-                      key={`${loop}-${item}`}
-                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-700" />
-                      <span className="whitespace-nowrap">{item}</span>
-                    </div>
-                  )),
-                )}
+            {hasActiveFilters ? (
+              <div className="flex flex-wrap gap-2">
+                {activeFilterChips.map((chip) => (
+                  <span
+                    key={chip.label}
+                    className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-soft)]"
+                  >
+                    {chip.label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_auto_auto_auto] xl:items-end">
+              <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+                  Search products
+                </div>
+                <SearchInput />
+              </div>
+
+              <div className="min-w-0">
+                <BrandSelect brands={brands} activeBrand={filters.brand ?? null} />
+              </div>
+
+              <div className="min-w-0">
+                <PriceRangeFilter />
+              </div>
+
+              <div className="min-w-0">
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
+                  Sort
+                </div>
+                <SortSelect />
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm text-gray-500">
-            {copy.showing(products.length, total)}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <BrandSelect brands={brands} activeBrand={filters.brand ?? null} />
-            <PriceRangeFilter />
-            <div className="flex items-center gap-2">
-              <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                {copy.sortBy}
-              </div>
-              <SortSelect />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <ProductGrid products={products} locale={locale} />
-        </div>
+        <section>
+          <ProductGrid products={publicProducts} locale={locale} />
+        </section>
 
         <div className="mt-8">
           <Pagination total={total} page={currentPage} pageSize={pageSize} />
         </div>
+        </div>
+
+        <CatalogCartRail />
       </main>
     </div>
   );

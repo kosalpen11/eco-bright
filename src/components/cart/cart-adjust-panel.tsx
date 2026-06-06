@@ -37,7 +37,7 @@ function CompactCartRows() {
 
           return (
             <motion.li
-              key={item.id}
+              key={item.lineId}
               layout
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -63,7 +63,7 @@ function CompactCartRows() {
                   <div className="inline-flex items-center gap-2 rounded-full border border-app-border bg-app-bg-soft px-2 py-1">
                     <button
                       type="button"
-                      onClick={() => updateQty(item.id, item.qty - 1)}
+                      onClick={() => updateQty(item.lineId, item.qty - 1)}
                       aria-label={cartCopy.decreaseQuantity(title)}
                       className="inline-flex size-7 items-center justify-center rounded-full text-app-text-muted transition hover:bg-app-surface-2 hover:text-app-text"
                     >
@@ -74,7 +74,7 @@ function CompactCartRows() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => updateQty(item.id, item.qty + 1)}
+                      onClick={() => updateQty(item.lineId, item.qty + 1)}
                       aria-label={cartCopy.increaseQuantity(title)}
                       className="inline-flex size-7 items-center justify-center rounded-full text-app-text-muted transition hover:bg-app-surface-2 hover:text-app-text"
                     >
@@ -84,7 +84,7 @@ function CompactCartRows() {
 
                   <button
                     type="button"
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeItem(item.lineId)}
                     aria-label={cartCopy.removeFromCart(title)}
                     className="text-xs font-semibold text-app-text-muted transition hover:text-app-danger"
                   >

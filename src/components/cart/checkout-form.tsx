@@ -1,111 +1,114 @@
-import { useLocale } from "@/components/locale/locale-provider";
-import { getUiText } from "@/lib/i18n";
+"use client";
+
 import { Input } from "@/components/ui/input";
-import { MapPin, Package } from "lucide-react";
 
 interface CheckoutFormProps {
-  customerName: string;
-  customerPhone: string;
-  note: string;
-  fulfillmentMethod: "pickup" | "delivery" | "";
-  onCustomerNameChange: (value: string) => void;
-  onCustomerPhoneChange: (value: string) => void;
-  onNoteChange: (value: string) => void;
-  onFulfillmentMethodChange: (value: "pickup" | "delivery") => void;
+  phone: string;
+  fulfillmentType: "delivery" | "pickup" | "";
+  deliveryLocation: string;
+  pickupNote: string;
+  onPhoneChange: (value: string) => void;
+  onFulfillmentTypeChange: (value: "delivery" | "pickup") => void;
+  onDeliveryLocationChange: (value: string) => void;
+  onPickupNoteChange: (value: string) => void;
+  errors?: {
+    phone?: string;
+    fulfillmentType?: string;
+    deliveryLocation?: string;
+  };
   className?: string;
 }
 
 export function CheckoutForm({
-  customerName,
-  customerPhone,
-  note,
-  fulfillmentMethod,
-  onCustomerNameChange,
-  onCustomerPhoneChange,
-  onNoteChange,
-  onFulfillmentMethodChange,
+  phone,
+  fulfillmentType,
+  deliveryLocation,
+  pickupNote,
+  onPhoneChange,
+  onFulfillmentTypeChange,
+  onDeliveryLocationChange,
+  onPickupNoteChange,
+  errors,
   className,
 }: CheckoutFormProps) {
-  const { locale } = useLocale();
-  const ui = getUiText(locale);
-
   return (
-    <div className={`space-y-6 rounded-[1.75rem] border border-app-border bg-app-surface-2 p-5 ${className ?? ""}`}>
-      <div className="space-y-3">
-        <label className="text-sm font-semibold text-app-text">
-          {locale === "km" ? "ការទទួល ឬការដឹកជញ្ជូន" : "Fulfillment Method"} <span className="text-app-danger">*</span>
+    <div className={`space-y-4 rounded-[1.6rem] border border-app-border bg-app-surface-2 p-4 ${className ?? ""}`}>
+      <div>
+        <label htmlFor="checkout-phone" className="mb-2 block text-sm font-semibold text-app-text">
+          Phone
         </label>
+        <Input
+          id="checkout-phone"
+          type="tel"
+          value={phone}
+          onChange={(event) => onPhoneChange(event.target.value)}
+          placeholder="012 913 xxxx"
+          className="bg-app-surface"
+        />
+        {errors?.phone ? <p className="mt-2 text-xs text-app-danger">{errors.phone}</p> : null}
+      </div>
+
+      <div>
+        <div className="mb-2 block text-sm font-semibold text-app-text">Fulfillment</div>
         <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => onFulfillmentMethodChange("pickup")}
-            className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 transition ${
-              fulfillmentMethod === "pickup"
-                ? "border-app-primary bg-app-primary-soft text-app-primary"
-                : "border-app-border bg-app-surface text-app-text-muted hover:border-app-text-soft"
-            }`}
-          >
-            <Package className="size-5" />
-            <span className="text-sm font-medium">{locale === "km" ? "មកយកដោយខ្លួនឯង" : "Pickup"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onFulfillmentMethodChange("delivery")}
-            className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 transition ${
-              fulfillmentMethod === "delivery"
-                ? "border-app-primary bg-app-primary-soft text-app-primary"
-                : "border-app-border bg-app-surface text-app-text-muted hover:border-app-text-soft"
-            }`}
-          >
-            <MapPin className="size-5" />
-            <span className="text-sm font-medium">{locale === "km" ? "ដឹកជញ្ជូន" : "Delivery"}</span>
-          </button>
+          {(["delivery", "pickup"] as const).map((option) => {
+            const selected = fulfillmentType === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onFulfillmentTypeChange(option)}
+                className={[
+                  "rounded-2xl border px-4 py-3 text-sm font-semibold transition",
+                  selected
+                    ? "border-app-primary bg-app-primary-soft text-app-primary"
+                    : "border-app-border bg-app-surface text-app-text-muted",
+                ].join(" ")}
+              >
+                {option === "delivery" ? "Delivery" : "Pickup"}
+              </button>
+            );
+          })}
         </div>
+        {errors?.fulfillmentType ? (
+          <p className="mt-2 text-xs text-app-danger">{errors.fulfillmentType}</p>
+        ) : null}
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="customerPhone" className="text-sm font-semibold text-app-text">
-            {locale === "km" ? "លេខទូរស័ព្ទ" : "Phone Number"} <span className="text-app-danger">*</span>
+      {fulfillmentType === "delivery" ? (
+        <div>
+          <label htmlFor="checkout-delivery" className="mb-2 block text-sm font-semibold text-app-text">
+            Delivery location
           </label>
           <Input
-            id="customerPhone"
-            type="tel"
-            placeholder={locale === "km" ? "ឧ. 012 345 678" : "e.g. 012 345 678"}
-            value={customerPhone}
-            onChange={(e) => onCustomerPhoneChange(e.target.value)}
-            className="rounded-xl border-app-border bg-app-surface px-4 py-6"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="customerName" className="text-sm font-semibold text-app-text">
-            {locale === "km" ? "ឈ្មោះ (ជាជម្រើស)" : "Name (Optional)"}
-          </label>
-          <Input
-            id="customerName"
+            id="checkout-delivery"
             type="text"
-            placeholder={locale === "km" ? "បញ្ចូលឈ្មោះរបស់អ្នក" : "Enter your name"}
-            value={customerName}
-            onChange={(e) => onCustomerNameChange(e.target.value)}
-            className="rounded-xl border-app-border bg-app-surface px-4 py-6"
+            value={deliveryLocation}
+            onChange={(event) => onDeliveryLocationChange(event.target.value)}
+            placeholder="Phnom Penh, Toul Kork"
+            className="bg-app-surface"
           />
+          {errors?.deliveryLocation ? (
+            <p className="mt-2 text-xs text-app-danger">{errors.deliveryLocation}</p>
+          ) : null}
         </div>
+      ) : null}
 
-        <div className="space-y-2">
-          <label htmlFor="note" className="text-sm font-semibold text-app-text">
-            {locale === "km" ? "ចំណាំ (ជាជម្រើស)" : "Note (Optional)"}
+      {fulfillmentType === "pickup" ? (
+        <div>
+          <label htmlFor="checkout-pickup" className="mb-2 block text-sm font-semibold text-app-text">
+            Pickup note
           </label>
           <Input
-            id="note"
+            id="checkout-pickup"
             type="text"
-            placeholder={locale === "km" ? "បន្ថែមព័ត៌មានបន្ថែម" : "Add extra details"}
-            value={note}
-            onChange={(e) => onNoteChange(e.target.value)}
-            className="rounded-xl border-app-border bg-app-surface px-4 py-6"
+            value={pickupNote}
+            onChange={(event) => onPickupNoteChange(event.target.value)}
+            placeholder="Pickup at shop"
+            className="bg-app-surface"
           />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

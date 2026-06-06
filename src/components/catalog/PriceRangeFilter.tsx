@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { RotateCcw } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/components/locale/locale-provider";
 import { getUiText } from "@/lib/i18n";
@@ -33,6 +34,8 @@ export function PriceRangeFilter() {
     };
   }, []);
 
+  const hasPriceFilter = Boolean(minParam || maxParam);
+
   function scheduleUpdate() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -54,9 +57,18 @@ export function PriceRangeFilter() {
     }, 300);
   }
 
+  function clearPriceRange() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("minPrice");
+    params.delete("maxPrice");
+    params.delete("page");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
   return (
     <div className="flex items-center gap-2">
-      <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
+      <div className="text-xs font-medium uppercase tracking-wider text-[var(--app-text-muted)]">
         {copy.price}
       </div>
 
@@ -70,10 +82,10 @@ export function PriceRangeFilter() {
           defaultValue={minParam}
           placeholder={copy.min}
           onChange={scheduleUpdate}
-          className="h-9 w-[110px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-700 focus:outline-none focus:ring-0"
+          className="h-11 w-[110px] rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-faint)] outline-none focus:border-[var(--app-primary)]"
         />
 
-        <span className="text-sm text-gray-300">{copy.to}</span>
+        <span className="text-sm text-[var(--app-text-faint)]">{copy.to}</span>
 
         <input
           key={`max:${maxParam}`}
@@ -84,8 +96,19 @@ export function PriceRangeFilter() {
           defaultValue={maxParam}
           placeholder={copy.max}
           onChange={scheduleUpdate}
-          className="h-9 w-[110px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-700 focus:outline-none focus:ring-0"
+          className="h-11 w-[110px] rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-faint)] outline-none focus:border-[var(--app-primary)]"
         />
+
+        {hasPriceFilter ? (
+          <button
+            type="button"
+            onClick={clearPriceRange}
+            className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:border-[var(--app-border-strong)] hover:text-[var(--app-text)]"
+            aria-label="Clear price range"
+          >
+            <RotateCcw className="size-4" />
+          </button>
+        ) : null}
       </div>
     </div>
   );

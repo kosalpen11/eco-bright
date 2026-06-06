@@ -17,21 +17,30 @@ export function getCartCount(items: Pick<CartItem, "qty">[]) {
   return items.reduce((total, item) => total + item.qty, 0);
 }
 
-export function getCartSubtotal(items: Pick<CartItem, "price" | "qty">[]) {
-  return items.reduce((total, item) => total + item.price * item.qty, 0);
+export function getCartSubtotal(
+  items: Pick<CartItem, "price" | "qty" | "optionPrice">[],
+) {
+  return items.reduce(
+    (total, item) => total + (item.optionPrice ?? item.price) * item.qty,
+    0,
+  );
 }
 
 function toInvoiceItems(items: CartItem[]): InvoiceItem[] {
-  return items.map((item) => ({
-    id: item.id,
-    title: item.title,
-    titleKm: item.titleKm,
-    imageUrl: item.imageUrl,
-    category: item.category,
-    price: item.price,
-    qty: item.qty,
-    lineTotal: item.price * item.qty,
-  }));
+  return items.map((item) => {
+    const price = item.optionPrice ?? item.price;
+
+    return {
+      id: item.id,
+      title: item.title,
+      titleKm: item.titleKm,
+      imageUrl: item.imageUrl,
+      category: item.category,
+      price,
+      qty: item.qty,
+      lineTotal: price * item.qty,
+    };
+  });
 }
 
 function createInvoicePayload(invoice: Omit<Invoice, "payload" | "telegramUrl">): InvoicePayload {

@@ -56,7 +56,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     >
       <div className="relative overflow-hidden border-b border-app-border bg-[radial-gradient(circle_at_top,var(--app-primary-soft),transparent_62%)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)] opacity-70" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,rgba(5,8,22,0.14),transparent)] dark:opacity-100" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,rgba(23,33,22,0.08),transparent)]" />
         <ProductImage
           src={product.imageUrl}
           alt={title}

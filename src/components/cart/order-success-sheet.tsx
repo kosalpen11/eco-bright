@@ -26,9 +26,10 @@ interface OrderSuccessSheetProps {
 export function OrderSuccessSheet({
   open,
   onOpenChange,
-  invoice,
+  invoice: _invoice,
   order,
 }: OrderSuccessSheetProps) {
+  void _invoice;
   const { locale } = useLocale();
   const orderingCopy = getUiText(locale).ordering;
   const isPending = order.status === "pending" || order.status === "draft";

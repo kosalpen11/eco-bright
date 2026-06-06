@@ -4,10 +4,11 @@ import { Link2, LoaderCircle } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useLocale } from "@/components/locale/locale-provider";
 import { Button } from "@/components/ui/button";
+import { buildCartLineId } from "@/lib/cart-storage";
 import { Input } from "@/components/ui/input";
 import { getUiText } from "@/lib/i18n";
 import { useCartStore } from "@/store/cart-store";
-import type { Product } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 
 interface ParseProductLinkResponse {
   ok: true;
@@ -63,7 +64,23 @@ export function PasteLinkForm() {
       }
 
       setOrderSource("pasted-link");
-      addItem(data.product);
+      addItem({
+        lineId: buildCartLineId({
+          productId: data.product.id,
+          variantId: null,
+        }),
+        id: data.product.id,
+        productId: data.product.id,
+        variantId: null,
+        title: data.product.title,
+        titleKm: data.product.titleKm,
+        variantTitle: null,
+        category: data.product.category as ProductCategory,
+        categoryLabel: data.product.categoryLabel,
+        categoryLabelKm: data.product.categoryLabelKm,
+        imageUrl: data.product.imageUrl,
+        price: data.product.price,
+      });
       setSuccess(orderingCopy.addedFromLink(data.product.title));
       setUrl("");
     } catch {

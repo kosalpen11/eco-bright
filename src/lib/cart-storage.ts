@@ -8,6 +8,10 @@ const emptySnapshot: CartSnapshot = {
   orderSource: "web",
 };
 
+export function buildCartLineId(value: Pick<CartItem, "productId" | "variantId">) {
+  return value.variantId ? `${value.productId}::${value.variantId}` : `${value.productId}::base`;
+}
+
 function isCartItem(value: unknown): value is CartItem {
   if (!value || typeof value !== "object") {
     return false;
@@ -16,7 +20,9 @@ function isCartItem(value: unknown): value is CartItem {
   const candidate = value as Record<string, unknown>;
 
   return (
+    (typeof candidate.lineId === "string" || candidate.lineId === undefined) &&
     typeof candidate.id === "string" &&
+    typeof candidate.productId === "string" &&
     typeof candidate.title === "string" &&
     typeof candidate.category === "string" &&
     typeof candidate.categoryLabel === "string" &&
@@ -56,9 +62,13 @@ export function readCartStorage(): CartSnapshot {
     }
 
     const parsed = JSON.parse(raw) as Partial<CartSnapshot>;
+    const items = Array.isArray(parsed.items) ? parsed.items.filter(isCartItem) : [];
 
     return {
-      items: Array.isArray(parsed.items) ? parsed.items.filter(isCartItem) : [],
+      items: items.map((item) => ({
+        ...item,
+        lineId: item.lineId || buildCartLineId(item),
+      })),
       invoiceMeta: isInvoiceMeta(parsed.invoiceMeta) ? parsed.invoiceMeta : null,
       orderSource: isOrderSource(parsed.orderSource) ? parsed.orderSource : "web",
     };
@@ -80,17 +90,17 @@ export function writeCartStorage(snapshot: CartSnapshot) {
 }
 
 export interface CheckoutFormState {
-  customerPhone: string;
-  customerName: string;
-  note: string;
-  fulfillmentMethod: "pickup" | "delivery" | "";
+  phone: string;
+  fulfillmentType: "delivery" | "pickup" | "";
+  deliveryLocation: string;
+  pickupNote: string;
 }
 
 const emptyCheckoutForm: CheckoutFormState = {
-  customerPhone: "",
-  customerName: "",
-  note: "",
-  fulfillmentMethod: "",
+  phone: "",
+  fulfillmentType: "",
+  deliveryLocation: "",
+  pickupNote: "",
 };
 
 function isCheckoutFormState(value: unknown): value is CheckoutFormState {
@@ -101,12 +111,12 @@ function isCheckoutFormState(value: unknown): value is CheckoutFormState {
   const candidate = value as Record<string, unknown>;
 
   return (
-    typeof candidate.customerPhone === "string" &&
-    typeof candidate.customerName === "string" &&
-    typeof candidate.note === "string" &&
-    (candidate.fulfillmentMethod === "pickup" ||
-      candidate.fulfillmentMethod === "delivery" ||
-      candidate.fulfillmentMethod === "")
+    typeof candidate.phone === "string" &&
+    (candidate.fulfillmentType === "delivery" ||
+      candidate.fulfillmentType === "pickup" ||
+      candidate.fulfillmentType === "") &&
+    typeof candidate.deliveryLocation === "string" &&
+    typeof candidate.pickupNote === "string"
   );
 }
 

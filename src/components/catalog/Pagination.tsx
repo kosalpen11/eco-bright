@@ -46,6 +46,8 @@ export function Pagination({
   const copy = getUiText(locale).catalog;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endItem = Math.min(total, page * pageSize);
 
   const items = useMemo(() => buildPageItems(page, totalPages), [page, totalPages]);
 
@@ -66,54 +68,74 @@ export function Pagination({
   }
 
   return (
-    <nav className="flex items-center justify-center gap-2" aria-label="Pagination">
-      <button
-        type="button"
-        onClick={() => goToPage(page - 1)}
-        disabled={page <= 1}
-        className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-300"
-      >
-        {copy.prev}
-      </button>
+    <nav
+      className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--app-shadow-surface)]"
+      aria-label="Pagination"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-[var(--app-text)]">
+            Showing {startItem}-{endItem} of {total}
+          </div>
+          <div className="text-xs text-[var(--app-text-muted)]">
+            Page {page} of {totalPages}
+          </div>
+        </div>
 
-      <div className="flex items-center gap-1">
-        {items.map((item, idx) => {
-          if (item === "...") {
-            return (
-              <span key={`e-${idx}`} className="px-2 text-sm text-gray-400">
-                ...
-              </span>
-            );
-          }
+        <div className="flex items-center justify-center gap-2 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm font-medium text-[var(--app-text-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-[var(--app-border-strong)]"
+          >
+            {copy.prev}
+          </button>
 
-          const isActive = item === page;
-          return (
-            <button
-              key={item}
-              type="button"
-              onClick={() => goToPage(item)}
-              aria-current={isActive ? "page" : undefined}
-              className={[
-                "h-9 min-w-[36px] rounded-lg px-3 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-[#1a2332] text-amber-700"
-                  : "border border-gray-200 text-gray-700 hover:border-gray-300",
-              ].join(" ")}
-            >
-              {item}
-            </button>
-          );
-        })}
+          <div className="hidden items-center gap-1 sm:flex">
+            {items.map((item, idx) => {
+              if (item === "...") {
+                return (
+                  <span key={`e-${idx}`} className="px-2 text-sm text-[var(--app-text-faint)]">
+                    ...
+                  </span>
+                );
+              }
+
+              const isActive = item === page;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => goToPage(item)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={[
+                    "h-11 min-w-[44px] rounded-full px-3 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-[var(--app-primary)] text-white"
+                      : "border border-[var(--app-border)] bg-white text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)]",
+                  ].join(" ")}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="rounded-full border border-[var(--app-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--app-text-soft)] sm:hidden">
+            {page} / {totalPages}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm font-medium text-[var(--app-text-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-[var(--app-border-strong)]"
+          >
+            {copy.next}
+          </button>
+        </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => goToPage(page + 1)}
-        disabled={page >= totalPages}
-        className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-300"
-      >
-        {copy.next}
-      </button>
     </nav>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { CartHydrator } from "@/components/cart/cart-hydrator";
 import { LocaleProvider } from "@/components/locale/locale-provider";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -8,8 +9,6 @@ import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
 import {
   DEFAULT_THEME,
   THEME_ATTRIBUTE,
-  THEME_CLASS_DARK,
-  THEME_STORAGE_KEY,
 } from "@/lib/theme";
 import "./globals.css";
 
@@ -32,17 +31,9 @@ const bebasNeue = Bebas_Neue({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const themeInitScript = `(() => {
-  try {
-    const stored = window.localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
-    const theme = stored === "dark" ? "dark" : ${JSON.stringify(DEFAULT_THEME)};
-    const root = document.documentElement;
-    root.setAttribute(${JSON.stringify(THEME_ATTRIBUTE)}, theme);
-    root.classList.toggle(${JSON.stringify(THEME_CLASS_DARK)}, theme === "dark");
-  } catch {
-    const root = document.documentElement;
-    root.setAttribute(${JSON.stringify(THEME_ATTRIBUTE)}, ${JSON.stringify(DEFAULT_THEME)});
-    root.classList.remove(${JSON.stringify(THEME_CLASS_DARK)});
-  }
+  const root = document.documentElement;
+  root.setAttribute(${JSON.stringify(THEME_ATTRIBUTE)}, ${JSON.stringify(DEFAULT_THEME)});
+  root.classList.remove("dark");
 })();`;
 
 export const metadata: Metadata = {
@@ -98,7 +89,10 @@ export default async function RootLayout({
       <body className="min-h-full bg-app-bg text-app-text">
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <ThemeProvider>
-          <LocaleProvider>{children}</LocaleProvider>
+          <LocaleProvider>
+            <CartHydrator />
+            {children}
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

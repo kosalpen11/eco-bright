@@ -26,11 +26,13 @@ export function CategoryBar({
 
     params.delete("page");
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    const targetPath =
+      pathname === "/products" || pathname.startsWith("/catalog/") ? pathname : "/products";
+    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {categories.map((category) => {
         const isActive =
           (category.id === "all" && (!activeCategory || activeCategory === "all")) ||
@@ -42,17 +44,23 @@ export function CategoryBar({
             type="button"
             onClick={() => setCategory(category.id)}
             className={[
-              "h-9 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors",
+              "shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
               isActive
-                ? "bg-[#1a2332] text-amber-700"
-                : "border border-gray-200 text-gray-700 hover:border-gray-300",
+                ? "border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-sm"
+                : "border-[var(--app-border)] bg-[var(--app-surface-2)] text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-card)]",
             ].join(" ")}
           >
             {category.label}
+            <span
+              className={
+                isActive ? "ml-2 text-white/75" : "ml-2 text-[var(--app-text-muted)]"
+              }
+            >
+              {category.count}
+            </span>
           </button>
         );
       })}
     </div>
   );
 }
-

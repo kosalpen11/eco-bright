@@ -5,7 +5,6 @@ import { ArrowUpRight } from "lucide-react";
 import { CartBadge } from "@/components/cart/cart-badge";
 import { LocaleToggle } from "@/components/locale/locale-toggle";
 import { useLocale } from "@/components/locale/locale-provider";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { getUiText } from "@/lib/i18n";
 import { SHOP_NAME, TELEGRAM_PUBLIC_URL } from "@/lib/constants";
@@ -43,7 +42,6 @@ export function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <LocaleToggle />
-          <ThemeToggle />
           <CartBadge />
           <Button asChild variant="outline" size="sm">
             <a href={TELEGRAM_PUBLIC_URL} target="_blank" rel="noreferrer">

@@ -1,34 +1,30 @@
 "use client";
 
 import { create } from "zustand";
-import { readCartStorage, writeCartStorage } from "@/lib/cart-storage";
+import { buildCartLineId, readCartStorage, writeCartStorage } from "@/lib/cart-storage";
 import { createInvoiceMeta } from "@/lib/invoice";
 import type { CartItem, CartSnapshot } from "@/types/cart";
 import type { OrderSource } from "@/types/order";
-import type { Product } from "@/types/product";
 
 interface CartState extends CartSnapshot {
   hasHydrated: boolean;
+  isCartOpen: boolean;
   hydrate: () => void;
-  addItem: (product: Product) => void;
+  addItem: (item: Omit<CartItem, "qty">) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
   setOrderSource: (source: OrderSource) => void;
+  openCart: () => void;
+  closeCart: () => void;
   refreshInvoiceSession: (nextSource?: OrderSource) => void;
   clearCart: () => void;
   resetInvoice: () => void;
 }
 
-function toCartItem(product: Product): CartItem {
+function toCartItem(item: Omit<CartItem, "qty">): CartItem {
   return {
-    id: product.id,
-    title: product.title,
-    titleKm: product.titleKm,
-    category: product.category,
-    categoryLabel: product.categoryLabel,
-    categoryLabelKm: product.categoryLabelKm,
-    imageUrl: product.imageUrl,
-    price: product.price,
+    ...item,
+    lineId: item.lineId || buildCartLineId(item),
     qty: 1,
   };
 }
@@ -45,6 +41,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   invoiceMeta: null,
   orderSource: "web",
   hasHydrated: false,
+  isCartOpen: false,
   hydrate: () => {
     if (get().hasHydrated) {
       return;
@@ -64,22 +61,21 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
   addItem: (product) =>
     set((state) => {
-      const current = state.items.find((item) => item.id === product.id);
+      const lineId = product.lineId || buildCartLineId(product);
+      const nextProduct = { ...product, lineId };
+      const current = state.items.find((item) => item.lineId === lineId);
       const nextMeta = state.invoiceMeta ?? createInvoiceMeta();
       const nextItems = current
         ? state.items.map((item) =>
-            item.id === product.id
+            item.lineId === lineId
               ? {
                   ...item,
-                  title: product.title,
-                  titleKm: product.titleKm,
-                  categoryLabel: product.categoryLabel,
-                  categoryLabelKm: product.categoryLabelKm,
+                  ...nextProduct,
                   qty: item.qty + 1,
                 }
               : item,
           )
-        : [...state.items, toCartItem(product)];
+        : [...state.items, toCartItem(nextProduct)];
 
       persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
@@ -87,11 +83,12 @@ export const useCartStore = create<CartState>((set, get) => ({
         items: nextItems,
         invoiceMeta: nextMeta,
         orderSource: state.orderSource,
+        isCartOpen: true,
       };
     }),
-  removeItem: (id) =>
+  removeItem: (lineId) =>
     set((state) => {
-      const nextItems = state.items.filter((item) => item.id !== id);
+      const nextItems = state.items.filter((item) => item.lineId !== lineId);
       const nextMeta = nextItems.length ? state.invoiceMeta ?? createInvoiceMeta() : null;
       persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
@@ -101,12 +98,12 @@ export const useCartStore = create<CartState>((set, get) => ({
         orderSource: state.orderSource,
       };
     }),
-  updateQty: (id, qty) =>
+  updateQty: (lineId, qty) =>
     set((state) => {
       const nextItems =
         qty <= 0
-          ? state.items.filter((item) => item.id !== id)
-          : state.items.map((item) => (item.id === id ? { ...item, qty } : item));
+          ? state.items.filter((item) => item.lineId !== lineId)
+          : state.items.map((item) => (item.lineId === lineId ? { ...item, qty } : item));
       const nextMeta = nextItems.length ? state.invoiceMeta ?? createInvoiceMeta() : null;
       persist({ items: nextItems, invoiceMeta: nextMeta, orderSource: state.orderSource });
 
@@ -126,6 +123,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       persist(next);
       return next;
     }),
+  openCart: () => set({ isCartOpen: true }),
+  closeCart: () => set({ isCartOpen: false }),
   refreshInvoiceSession: (nextSource = "web") =>
     set((state) => {
       const next = {
