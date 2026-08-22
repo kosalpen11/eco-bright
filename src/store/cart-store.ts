@@ -1,7 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import { buildCartLineId, readCartStorage, writeCartStorage } from "@/lib/cart-storage";
+import {
+  buildCartLineId,
+  clearCartClientState,
+  readCartStorage,
+  writeCartStorage,
+} from "@/lib/cart-storage";
 import { createInvoiceMeta } from "@/lib/invoice";
 import type { CartItem, CartSnapshot } from "@/types/cart";
 import type { OrderSource } from "@/types/order";
@@ -137,12 +142,12 @@ export const useCartStore = create<CartState>((set, get) => ({
     }),
   clearCart: () => {
     const next = { items: [], invoiceMeta: null, orderSource: "web" as const };
-    persist(next);
+    clearCartClientState();
     set(next);
   },
   resetInvoice: () => {
     const next = { items: [], invoiceMeta: null, orderSource: "web" as const };
-    persist(next);
+    clearCartClientState();
     set(next);
   },
 }));

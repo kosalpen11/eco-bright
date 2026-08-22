@@ -21,8 +21,9 @@ const salesOrderService = new SalesOrderService();
 
 registerSalesHandlers(bot, salesOrderService);
 
-bot.start().then(() => {
+bot.init().then(() => {
   console.log("Sales Telegram bot started", {
-    botUsername: config.botUsername,
+    botUsername: bot.botInfo.username,
   });
+  bot.start();
 });

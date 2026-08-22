@@ -89,6 +89,18 @@ export function writeCartStorage(snapshot: CartSnapshot) {
   }
 }
 
+export function clearCartStorage() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(STORAGE_KEYS.cart);
+  } catch {
+    // Ignore errors.
+  }
+}
+
 export interface CheckoutFormState {
   phone: string;
   fulfillmentType: "delivery" | "pickup" | "";
@@ -162,4 +174,9 @@ export function clearCheckoutFormStorage() {
   } catch {
     // Ignore errors.
   }
+}
+
+export function clearCartClientState() {
+  clearCartStorage();
+  clearCheckoutFormStorage();
 }

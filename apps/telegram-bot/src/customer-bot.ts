@@ -16,10 +16,11 @@ const salesSupportService = new SalesSupportQueryService();
 
 registerCustomerHandlers(bot, sessionService, salesSupportService);
 
-bot.start().then(() => {
+bot.init().then(() => {
   console.log("Customer Telegram bot started", {
-    botUsername: config.TELEGRAM_BOT_USERNAME,
+    botUsername: bot.botInfo.username,
     salesBotUsername: config.TELEGRAM_ORDER_TARGET,
     supportTarget: config.TELEGRAM_SUPPORT_TARGET ?? config.TELEGRAM_ORDER_TARGET,
   });
+  bot.start();
 });

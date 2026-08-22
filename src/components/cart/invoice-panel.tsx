@@ -10,7 +10,6 @@ import { CheckoutForm } from "@/components/cart/checkout-form";
 import { CheckoutMessagePreview } from "@/components/cart/checkout-message-preview";
 import { Button } from "@/components/ui/button";
 import {
-  clearCheckoutFormStorage,
   readCheckoutFormStorage,
   writeCheckoutFormStorage,
 } from "@/lib/cart-storage";
@@ -47,6 +46,7 @@ function CartPanelBody({
   onClose?: () => void;
 }) {
   const items = useCartStore((state) => state.items);
+  const invoiceMeta = useCartStore((state) => state.invoiceMeta);
   const updateQty = useCartStore((state) => state.updateQty);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
@@ -58,8 +58,24 @@ function CartPanelBody({
         fulfillmentType,
         deliveryLocation,
         pickupNote,
+      }, {
+        invoiceMeta,
       }),
-    [deliveryLocation, fulfillmentType, items, phone, pickupNote],
+    [deliveryLocation, fulfillmentType, invoiceMeta, items, phone, pickupNote],
+  );
+  const directBuyMessage = useMemo(
+    () =>
+      formatCheckoutMessage(
+        items,
+        {
+          phone,
+          fulfillmentType,
+          deliveryLocation,
+          pickupNote,
+        },
+        { compact: true, invoiceMeta },
+      ),
+    [deliveryLocation, fulfillmentType, invoiceMeta, items, phone, pickupNote],
   );
   const validation = useMemo(
     () =>
@@ -78,7 +94,7 @@ function CartPanelBody({
 
   async function handleOpenTelegram() {
     window.open(
-      buildTelegramProfileUrl(TELEGRAM_CHECKOUT_USERNAME, message),
+      buildTelegramProfileUrl(TELEGRAM_CHECKOUT_USERNAME, directBuyMessage),
       "_blank",
       "noopener,noreferrer",
     );
@@ -94,7 +110,7 @@ function CartPanelBody({
             </div>
             <div className="mt-1 text-2xl font-bold text-app-text">{formatCurrency(total)}</div>
           </div>
-          <Button type="button" variant="destructive" size="sm" onClick={() => { clearCart(); clearCheckoutFormStorage(); }}>
+          <Button type="button" variant="destructive" size="sm" onClick={() => { clearCart(); }}>
             <Trash2 className="size-4" />
             Clear
           </Button>

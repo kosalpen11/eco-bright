@@ -21,10 +21,11 @@ const adminOrderService = new AdminOrderService();
 
 registerAdminHandlers(bot, adminOrderService);
 
-bot.start().then(() => {
+bot.init().then(() => {
   console.log("Admin Telegram bot started", {
-    botUsername: config.botUsername,
+    botUsername: bot.botInfo.username,
     adminUsers: config.adminUserIds.length,
     adminChatId: config.adminChatId,
   });
+  bot.start();
 });

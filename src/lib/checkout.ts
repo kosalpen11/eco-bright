@@ -1,4 +1,4 @@
-import type { CartItem } from "@/types/cart";
+import type { CartItem, InvoiceMeta } from "@/types/cart";
 
 export interface CheckoutCustomerInfo {
   phone: string;
@@ -83,17 +83,11 @@ export function validateCheckout(
 export function formatCheckoutMessage(
   cartItems: CartItem[],
   customerInfo: CheckoutCustomerInfo,
+  options?: {
+    compact?: boolean;
+    invoiceMeta?: InvoiceMeta | null;
+  },
 ) {
-  const lines = cartItems.map((item) => {
-    const title = item.variantTitle ? `${item.title} ${item.variantTitle}` : item.title;
-    const qtyKh = toKhmerNumber(item.qty);
-    const unitPrice = item.optionPrice ?? item.price;
-    const lineTotal = unitPrice * item.qty;
-    return `${title} ចំនួន ${qtyKh} គ្រឿង @ $${formatTotal(unitPrice)} = $${formatTotal(
-      lineTotal,
-    )}`;
-  });
-
   const deliveryValue =
     customerInfo.fulfillmentType === "delivery"
       ? formatFieldValue(customerInfo.deliveryLocation)
@@ -106,6 +100,24 @@ export function formatCheckoutMessage(
 
   const contactPhone = formatFieldValue(normalizePhone(customerInfo.phone));
   const total = `$${formatTotal(getCheckoutTotal(cartItems))}`;
+  const orderId = options?.invoiceMeta?.invoiceId ?? "Pending";
+  const orderTime = options?.invoiceMeta?.createdAtIso
+    ? new Intl.DateTimeFormat("en-GB", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(new Date(options.invoiceMeta.createdAtIso))
+    : new Intl.DateTimeFormat("en-GB", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(new Date());
 
   // Build message using requested Khmer layout with per-line prices
   const productLines: string[] = cartItems.map((item, idx) => {
@@ -130,6 +142,11 @@ export function formatCheckoutMessage(
     "━━━━━━━━━━━━━━",
   ];
 
+  msg.push(`លេខបញ្ជាទិញ៖ ${orderId}`);
+  msg.push(`ថ្ងៃម៉ោង៖ ${orderTime}`);
+  msg.push(`តម្លៃសរុប៖ ${total}`);
+  msg.push("━━━━━━━━━━━━━━");
+
   if (customerInfo.fulfillmentType === "delivery" && deliveryValue) {
     msg.push(`ទីតាំងដឹកជញ្ជូន៖ ${deliveryValue}  `);
   } else if (customerInfo.fulfillmentType === "pickup" && pickupValue) {
@@ -137,17 +154,19 @@ export function formatCheckoutMessage(
   }
 
   msg.push(`លេខទូរសព្ទ៖ ${contactPhone}  `);
-  msg.push("");
-  msg.push(`តម្លៃសរុប៖ ${total}`);
-  msg.push("━━━━━━━━━━━━━━");
-  msg.push("សួស្តី! ខ្ញុំចាប់អារម្មណ៍ទិញផលិតផលទាំងនេះ។ តើនៅមានទំនិញដែរឬទេ?");
+
+  if (!options?.compact) {
+    msg.push("");
+    msg.push("━━━━━━━━━━━━━━");
+    msg.push("សួស្តី! ខ្ញុំចាប់អារម្មណ៍ទិញផលិតផលទាំងនេះ។ តើនៅមានទំនិញដែរឬទេ?");
+  }
 
   return msg.join("\n");
 }
 
 export function buildTelegramProfileUrl(username: string, message?: string) {
   const normalized = username.trim().replace(/^@/, "");
-  const target = normalized || "sonita17";
+  const target = normalized || "ecobrightsale";
 
   if (!message?.trim()) {
     return `https://t.me/${target}`;

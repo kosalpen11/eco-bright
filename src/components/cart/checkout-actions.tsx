@@ -23,7 +23,7 @@ export function CheckoutActions({
       </Button>
       <Button type="button" variant="surface" onClick={onOpenTelegram} disabled={disabled}>
         <ExternalLink className="size-4" />
-        Open Telegram
+        BUY NOW
       </Button>
     </div>
   );

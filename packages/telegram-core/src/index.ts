@@ -8,3 +8,4 @@ export * from "./messages/build-support-message";
 export * from "./notifications/build-customer-status-message";
 export * from "./notifications/notify-customer-order-updated";
 export * from "./types";
+export * from "./sales/build-sales-message";
