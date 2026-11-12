@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 import { CartHydrator } from "@/components/cart/cart-hydrator";
+import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/locale/locale-provider";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { SHOP_DESCRIPTION, SHOP_NAME } from "@/lib/constants";
+import { SHOP_DESCRIPTION } from "@/lib/constants";
 import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
+import {
+  DEFAULT_OG_IMAGE,
+  SITE_ALTERNATE_LOCALE,
+  SITE_LOCALE,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 import {
   DEFAULT_THEME,
   THEME_ATTRIBUTE,
@@ -27,9 +36,10 @@ const bebasNeue = Bebas_Neue({
   variable: "--font-bebas",
   subsets: ["latin"],
   weight: "400",
+  // Display font is only used for a few headings; don't compete with the LCP image.
+  preload: false,
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const themeInitScript = `(() => {
   const root = document.documentElement;
   root.setAttribute(${JSON.stringify(THEME_ATTRIBUTE)}, ${JSON.stringify(DEFAULT_THEME)});
@@ -37,12 +47,13 @@ const themeInitScript = `(() => {
 })();`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: SHOP_NAME,
-    template: `%s | ${SHOP_NAME}`,
+    default: `${SITE_NAME} | LED & Solar Cambodia`,
+    template: `%s | ${SITE_NAME}`,
   },
   description: SHOP_DESCRIPTION,
+  applicationName: SITE_NAME,
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
@@ -57,15 +68,19 @@ export const metadata: Metadata = {
     "solar street lights",
   ],
   openGraph: {
-    title: SHOP_NAME,
-    description: SHOP_DESCRIPTION,
     type: "website",
-    siteName: SHOP_NAME,
+    siteName: SITE_NAME,
+    locale: SITE_LOCALE,
+    alternateLocale: [SITE_ALTERNATE_LOCALE],
+    title: `${SITE_NAME} | LED & Solar Cambodia`,
+    description: SHOP_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: SHOP_NAME,
+    title: `${SITE_NAME} | LED & Solar Cambodia`,
     description: SHOP_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
   },
 };
 
@@ -92,6 +107,8 @@ export default async function RootLayout({
           <LocaleProvider>
             <CartHydrator />
             {children}
+            <Footer />
+            <AnalyticsScripts />
           </LocaleProvider>
         </ThemeProvider>
       </body>

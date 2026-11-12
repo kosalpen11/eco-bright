@@ -4,10 +4,14 @@ import { useRef, useState } from "react";
 import { useLocale } from "@/components/locale/locale-provider";
 import { getUiText } from "@/lib/i18n";
 
-async function copyText(text: string) {
+export async function copyText(text: string) {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Permission denied (e.g. some in-app browsers): fall through to the legacy path.
+    }
   }
 
   // Fallback for older browsers / restricted clipboard APIs.
@@ -18,8 +22,9 @@ async function copyText(text: string) {
   el.style.left = "-9999px";
   document.body.appendChild(el);
   el.select();
-  document.execCommand("copy");
+  const ok = document.execCommand("copy");
   document.body.removeChild(el);
+  if (!ok) throw new Error("Copy failed");
 }
 
 export function CopyProductButton({

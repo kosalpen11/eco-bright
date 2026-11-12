@@ -50,7 +50,7 @@ export function getProductPrice(
 export function getProductOldPrice(
   product: Product & { oldPrice?: number | string | null; old_price?: number | string | null },
 ): number | null {
-  let oldPrice = product.oldPrice ?? (product as unknown as Record<string, unknown>).old_price;
+  const oldPrice = product.oldPrice ?? (product as unknown as Record<string, unknown>).old_price;
   
   if (oldPrice === null || oldPrice === undefined || oldPrice === "") return null;
   

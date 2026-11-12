@@ -26,9 +26,15 @@ export function CategoryBar({
 
     params.delete("page");
     const qs = params.toString();
-    const targetPath =
-      pathname === "/products" || pathname.startsWith("/catalog/") ? pathname : "/products";
-    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
+    const onCatalog = pathname === "/products" || pathname.startsWith("/catalog/");
+    const targetPath = onCatalog ? pathname : "/products";
+    const href = qs ? `${targetPath}?${qs}` : targetPath;
+    // Filter in place on the catalog; from other pages (e.g. a product) navigate normally.
+    if (onCatalog) {
+      router.replace(href, { scroll: false });
+    } else {
+      router.push(href);
+    }
   }
 
   return (
@@ -44,7 +50,7 @@ export function CategoryBar({
             type="button"
             onClick={() => setCategory(category.id)}
             className={[
-              "shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
+              "shrink-0 whitespace-nowrap rounded-full border px-4 py-3 text-sm font-medium transition-colors",
               isActive
                 ? "border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-sm"
                 : "border-[var(--app-border)] bg-[var(--app-surface-2)] text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-card)]",
@@ -53,7 +59,7 @@ export function CategoryBar({
             {category.label}
             <span
               className={
-                isActive ? "ml-2 text-white/75" : "ml-2 text-[var(--app-text-muted)]"
+                isActive ? "ml-2 text-white" : "ml-2 text-[var(--app-text-muted)]"
               }
             >
               {category.count}

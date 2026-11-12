@@ -6,6 +6,7 @@ import type {
   ProductAttributeValue,
   ProductCategory,
   ProductFilters,
+  ProductSpecs,
   ProductVariant,
 } from "@/lib/types";
 
@@ -142,6 +143,21 @@ function toAttributes(value: unknown): Record<string, ProductAttributeValue> {
   });
 
   return Object.fromEntries(entries);
+}
+
+function toSpecs(row: Record<string, unknown>): ProductSpecs {
+  const text = (value: unknown) =>
+    typeof value === "string" && value.trim() ? value.trim() : null;
+
+  return {
+    length: text(row.specLength),
+    voltage: text(row.specVoltage),
+    wattage: text(row.specWattage),
+    color: text(row.specColor),
+    colorKm: text(row.specColorKm),
+    warranty: text(row.warranty),
+    warrantyKm: text(row.warrantyKm),
+  };
 }
 
 function toStockQty(value: unknown): number | null {
@@ -293,7 +309,15 @@ export async function getProducts(filters: ProductFilters): Promise<{
           COALESCE(to_jsonb(p) -> 'variants', '[]'::jsonb)
         ) AS variants,
         p.is_active AS "isActive",
-        p.sort_order AS "sortOrder"
+        p.sort_order AS "sortOrder",
+      -- Spec columns are optional (migration 0015); to_jsonb keeps this working before it runs.
+      NULLIF(to_jsonb(p) ->> 'spec_length', '') AS "specLength",
+      NULLIF(to_jsonb(p) ->> 'spec_voltage', '') AS "specVoltage",
+      NULLIF(to_jsonb(p) ->> 'spec_wattage', '') AS "specWattage",
+      NULLIF(to_jsonb(p) ->> 'spec_color', '') AS "specColor",
+      NULLIF(to_jsonb(p) ->> 'spec_color_km', '') AS "specColorKm",
+      NULLIF(to_jsonb(p) ->> 'warranty', '') AS "warranty",
+      NULLIF(to_jsonb(p) ->> 'warranty_km', '') AS "warrantyKm"
       FROM products p
       LEFT JOIN LATERAL (
         SELECT COALESCE(
@@ -407,6 +431,7 @@ export async function getProducts(filters: ProductFilters): Promise<{
     variants: toVariants(row.variants),
     isActive: row.isActive,
     sortOrder: row.sortOrder ?? null,
+    specs: toSpecs(row),
   }));
 
   return { products, total, page, pageSize: PAGE_SIZE };
@@ -425,6 +450,7 @@ export async function getCategories(filters?: { brand?: string | null }): Promis
     SELECT
       category AS id,
       MIN(category_label) AS label,
+      MIN(NULLIF(category_label_km, '')) AS "labelKm",
       COUNT(*)::int AS count
     FROM products p
     WHERE p.is_active = true AND ${brandClause}
@@ -435,6 +461,7 @@ export async function getCategories(filters?: { brand?: string | null }): Promis
   return rows.map((row) => ({
     id: row.id,
     label: row.label,
+    labelKm: row.labelKm ?? null,
     count: Number(row.count ?? 0),
   }));
 }
@@ -498,7 +525,15 @@ export async function getProductById(id: string): Promise<Product | null> {
         COALESCE(to_jsonb(p) -> 'variants', '[]'::jsonb)
       ) AS variants,
       p.is_active AS "isActive",
-      p.sort_order AS "sortOrder"
+      p.sort_order AS "sortOrder",
+      -- Spec columns are optional (migration 0015); to_jsonb keeps this working before it runs.
+      NULLIF(to_jsonb(p) ->> 'spec_length', '') AS "specLength",
+      NULLIF(to_jsonb(p) ->> 'spec_voltage', '') AS "specVoltage",
+      NULLIF(to_jsonb(p) ->> 'spec_wattage', '') AS "specWattage",
+      NULLIF(to_jsonb(p) ->> 'spec_color', '') AS "specColor",
+      NULLIF(to_jsonb(p) ->> 'spec_color_km', '') AS "specColorKm",
+      NULLIF(to_jsonb(p) ->> 'warranty', '') AS "warranty",
+      NULLIF(to_jsonb(p) ->> 'warranty_km', '') AS "warrantyKm"
     FROM products p
     LEFT JOIN LATERAL (
       SELECT COALESCE(
@@ -610,5 +645,24 @@ export async function getProductById(id: string): Promise<Product | null> {
     variants: toVariants(row.variants),
     isActive: row.isActive,
     sortOrder: row.sortOrder ?? null,
+    specs: toSpecs(row),
   };
+}
+
+/** Active product ids with last-modified time, for app/sitemap.ts. */
+export async function getSitemapProducts(): Promise<Array<{ id: string; updatedAt: Date | null }>> {
+  const sql = getSql();
+
+  const rows = await sql`
+    SELECT p.id, p.updated_at AS "updatedAt"
+    FROM products p
+    WHERE p.is_active = true
+      AND p.id <> ''
+    ORDER BY p.sort_order ASC NULLS LAST, p.id ASC
+  `;
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
+  }));
 }

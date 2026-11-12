@@ -20,6 +20,7 @@ export function PriceRangeFilter() {
   const searchParams = useSearchParams();
   const { locale } = useLocale();
   const copy = getUiText(locale).catalog;
+  const pageCopy = getUiText(locale).catalogPage;
 
   const minRef = useRef<HTMLInputElement | null>(null);
   const maxRef = useRef<HTMLInputElement | null>(null);
@@ -104,7 +105,7 @@ export function PriceRangeFilter() {
             type="button"
             onClick={clearPriceRange}
             className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:border-[var(--app-border-strong)] hover:text-[var(--app-text)]"
-            aria-label="Clear price range"
+            aria-label={pageCopy.clearPriceRange}
           >
             <RotateCcw className="size-4" />
           </button>

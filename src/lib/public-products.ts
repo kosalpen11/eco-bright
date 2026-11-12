@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import type { Product, ProductAttributeValue, ProductVariant } from "@/lib/types";
+import type { Product, ProductAttributeValue, ProductSpecs, ProductVariant } from "@/lib/types";
 
 const FALLBACK_PRODUCT_IMAGE = "/ecobright-logo.jpeg";
 
@@ -40,7 +40,18 @@ export interface PublicProduct {
   tags: string[];
   attributes: Record<string, ProductAttributeValue>;
   variants: PublicProductVariant[];
+  specs: ProductSpecs;
 }
+
+const EMPTY_SPECS: ProductSpecs = {
+  length: null,
+  voltage: null,
+  wattage: null,
+  color: null,
+  colorKm: null,
+  warranty: null,
+  warrantyKm: null,
+};
 
 function isAllowedImageUrl(url: string) {
   if (url.startsWith("/")) return true;
@@ -147,6 +158,7 @@ export function mapProductToPublicProduct(product: Product): PublicProduct {
     tags: product.tags,
     attributes: product.attributes,
     variants: publicVariants,
+    specs: product.specs ?? EMPTY_SPECS,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, LazyMotion, m } from "framer-motion";
 import { MessageCircle, ShoppingCart, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -9,6 +9,7 @@ import { CheckoutActions } from "@/components/cart/checkout-actions";
 import { CheckoutForm } from "@/components/cart/checkout-form";
 import { CheckoutMessagePreview } from "@/components/cart/checkout-message-preview";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/components/locale/locale-provider";
 import {
   readCheckoutFormStorage,
   writeCheckoutFormStorage,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/checkout";
 import { TELEGRAM_CHECKOUT_USERNAME } from "@/lib/constants";
 import { formatCurrency } from "@/lib/currency";
+import { getUiText } from "@/lib/i18n";
 import { useCartStore } from "@/store/cart-store";
 
 function CartPanelBody({
@@ -45,6 +47,8 @@ function CartPanelBody({
   onPickupNoteChange: (value: string) => void;
   onClose?: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = getUiText(locale).checkout;
   const items = useCartStore((state) => state.items);
   const invoiceMeta = useCartStore((state) => state.invoiceMeta);
   const updateQty = useCartStore((state) => state.updateQty);
@@ -105,14 +109,14 @@ function CartPanelBody({
       <div className="rounded-[1.6rem] border border-app-border bg-app-surface p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">
-              Cart total
+            <div className="locale-label text-xs font-semibold uppercase text-[var(--app-accent-text)]">
+              {copy.cartTotal}
             </div>
             <div className="mt-1 text-2xl font-bold text-app-text">{formatCurrency(total)}</div>
           </div>
           <Button type="button" variant="destructive" size="sm" onClick={() => { clearCart(); }}>
             <Trash2 className="size-4" />
-            Clear
+            {copy.clear}
           </Button>
         </div>
       </div>
@@ -151,15 +155,27 @@ function CartPanelBody({
 
       {!validation.isValid ? (
         <p className="text-xs text-app-text-muted">
-          Complete phone and fulfillment info before copying the checkout message.
+          {copy.completeInfo}
         </p>
       ) : null}
 
       {onClose ? (
         <Button type="button" variant="ghost" className="w-full" onClick={onClose}>
-          Close
+          {copy.close}
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+const loadMotionFeatures = () => import("@/lib/motion-features").then((mod) => mod.default);
+
+function EmptyCart({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-[1.4rem] border border-dashed border-app-border bg-app-surface-2 p-6 text-center">
+      <ShoppingCart className="size-6 text-app-primary" aria-hidden="true" />
+      <div className="text-sm font-semibold text-app-text">{title}</div>
+      <p className="text-sm text-app-text-muted">{body}</p>
     </div>
   );
 }
@@ -178,6 +194,8 @@ export function InvoicePanel() {
   const [deliveryLocation, setDeliveryLocation] = useState(storedForm.deliveryLocation);
   const [pickupNote, setPickupNote] = useState(storedForm.pickupNote);
 
+  const { locale } = useLocale();
+  const panelCopy = getUiText(locale).cartPanel;
   const count = items.reduce((total, item) => total + item.qty, 0);
   const total = getCheckoutTotal(items);
 
@@ -193,7 +211,7 @@ export function InvoicePanel() {
 
   function handleFulfillmentTypeChange(value: "delivery" | "pickup") {
     setFulfillmentType(value);
-    const nextPickupNote = value === "pickup" ? pickupNote || "Pickup at shop" : pickupNote;
+    const nextPickupNote = value === "pickup" ? pickupNote || getUiText(locale).checkout.pickupDefault : pickupNote;
     const nextDeliveryLocation = value === "delivery" ? deliveryLocation : "";
     setPickupNote(nextPickupNote);
     setDeliveryLocation(nextDeliveryLocation);
@@ -238,17 +256,15 @@ export function InvoicePanel() {
               <ShoppingCart className="size-5" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-app-text">Checkout</div>
+              <div className="text-sm font-semibold text-app-text">{panelCopy.checkout}</div>
               <div className="text-xs text-app-text-muted">
-                {count} items · {formatCurrency(total)}
+                {panelCopy.items(count)} · {formatCurrency(total)}
               </div>
             </div>
           </div>
 
           {items.length === 0 ? (
-            <div className="rounded-[1.4rem] border border-dashed border-app-border bg-app-surface-2 p-6 text-sm text-app-text-muted">
-              Add products to build a Telegram checkout message.
-            </div>
+            <EmptyCart title={panelCopy.emptyTitle} body={panelCopy.emptyBody} />
           ) : (
             <CartPanelBody
               phone={phone}
@@ -276,9 +292,9 @@ export function InvoicePanel() {
                 <ShoppingCart className="size-4.5" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-app-text">Cart & Checkout</div>
+                <div className="text-sm font-semibold text-app-text">{panelCopy.cartAndCheckout}</div>
                 <div className="text-xs text-app-text-muted">
-                  {count} items · {formatCurrency(total)}
+                  {panelCopy.items(count)} · {formatCurrency(total)}
                 </div>
               </div>
             </div>
@@ -288,17 +304,18 @@ export function InvoicePanel() {
           </button>
         </div>
 
+        <LazyMotion features={loadMotionFeatures}>
         <AnimatePresence>
           {isCartOpen ? (
             <>
-              <motion.div
+              <m.div
                 className="fixed inset-0 z-50 bg-app-overlay"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={closeCart}
               />
-              <motion.div
+              <m.div
                 className="fixed inset-x-0 bottom-0 z-[60] max-h-[88vh] overflow-auto rounded-t-[2rem] border-t border-app-border bg-app-surface p-4 pb-8"
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
@@ -307,9 +324,7 @@ export function InvoicePanel() {
               >
                 <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-app-surface-3" />
                 {items.length === 0 ? (
-                  <div className="rounded-[1.4rem] border border-dashed border-app-border bg-app-surface-2 p-6 text-sm text-app-text-muted">
-                    Add products to build a Telegram checkout message.
-                  </div>
+                  <EmptyCart title={panelCopy.emptyTitle} body={panelCopy.emptyBody} />
                 ) : (
                   <CartPanelBody
                     phone={phone}
@@ -323,10 +338,11 @@ export function InvoicePanel() {
                     onClose={closeCart}
                   />
                 )}
-              </motion.div>
+              </m.div>
             </>
           ) : null}
         </AnimatePresence>
+        </LazyMotion>
       </div>
     </>
   );

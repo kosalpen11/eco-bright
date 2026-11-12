@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import VariantPickerModal from "./VariantPickerModal";
 
+import { useLocale } from "@/components/locale/locale-provider";
+import { productEventParams, track } from "@/lib/analytics";
 import { buildCartLineId } from "@/lib/cart-storage";
+import { getUiText } from "@/lib/i18n";
 import type { PublicProduct, PublicProductVariant } from "@/lib/public-products";
 import { useCartStore } from "@/store/cart-store";
 import type { ProductCategory } from "@/types/product";
@@ -25,8 +27,9 @@ export function AddToCartButton({
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useCartStore((state) => state.openCart);
   const [added, setAdded] = useState(false);
-  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
+  const { locale } = useLocale();
+  const copy = getUiText(locale).productPage;
 
   function handleAddToCart() {
     // If product has variants but no specific variant was provided,
@@ -54,6 +57,19 @@ export function AddToCartButton({
       price,
     });
     openCart();
+    track(
+      "add_to_cart",
+      productEventParams({
+        location: "product_card",
+        id: product.id,
+        name: product.title,
+        variant: variant?.label ?? null,
+        category: product.category,
+        price,
+        quantity: 1,
+        currency: product.currency,
+      }),
+    );
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1200);
   }
@@ -77,6 +93,19 @@ export function AddToCartButton({
       price: v.price ?? price,
     });
     openCart();
+    track(
+      "add_to_cart",
+      productEventParams({
+        location: "product_card",
+        id: product.id,
+        name: product.title,
+        variant: v.label ?? null,
+        category: product.category,
+        price: v.price ?? price,
+        quantity: 1,
+        currency: product.currency,
+      }),
+    );
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1200);
   }
@@ -84,7 +113,7 @@ export function AddToCartButton({
   return (
     <>
       <button type="button" onClick={handleAddToCart} className={className}>
-        {added ? "Added" : "Add to Cart"}
+        {added ? copy.added : copy.addToCart}
       </button>
       {showPicker && (
         <VariantPickerModal

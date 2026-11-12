@@ -46,6 +46,7 @@ export function SortSelect() {
 
   return (
     <select
+      aria-label={copy.sortBy}
       key={value}
       defaultValue={value}
       onChange={(e) => setSort(e.currentTarget.value as ProductSortMode)}

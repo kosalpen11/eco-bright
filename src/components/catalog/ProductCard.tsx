@@ -4,11 +4,10 @@ import Link from "next/link";
 import { AddToCartButton } from "@/components/catalog/AddToCartButton";
 import { getEffectiveOldPrice, getRatingLabel, optimizeImageUrl } from "@/components/catalog/catalog-helpers";
 import type { Locale } from "@/lib/locale";
-import { localizeText } from "@/lib/i18n";
+import { getUiText, localizeText } from "@/lib/i18n";
 import {
   getDisplayProductImage,
   getDisplayProductPrice,
-  getPublicAvailabilityText,
   type PublicProduct,
 } from "@/lib/public-products";
 
@@ -20,12 +19,22 @@ function formatCurrency(value: number, currency: string) {
   }).format(value);
 }
 
-export function ProductCard({ product, locale }: { product: PublicProduct; locale: Locale }) {
+export function ProductCard({
+  product,
+  locale,
+  eager = false,
+}: {
+  product: PublicProduct;
+  locale: Locale;
+  /** First cards in the grid: load immediately at high priority (possible LCP). */
+  eager?: boolean;
+}) {
   const displayName = localizeText(locale, product.name, product.titleKm);
   const image = getDisplayProductImage(product, product.variants);
   const price = getDisplayProductPrice(product, product.variants);
   const oldPrice = getEffectiveOldPrice(product, product.variants[0] ?? null);
   const ratingLabel = getRatingLabel(product.rating);
+  const copy = getUiText(locale).productPage;
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[1.4rem] border border-[var(--app-border)] bg-white shadow-[var(--app-shadow-card)]">
@@ -36,7 +45,9 @@ export function ProductCard({ product, locale }: { product: PublicProduct; local
               src={optimizeImageUrl(image, 640)}
               alt={displayName}
               fill
-              sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
+              sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 240px"
+              loading={eager ? "eager" : "lazy"}
+              fetchPriority={eager ? "high" : "auto"}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : (
@@ -64,8 +75,8 @@ export function ProductCard({ product, locale }: { product: PublicProduct; local
       </Link>
 
       <div className="flex flex-1 flex-col p-3.5">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--app-text-muted)]">
-          {product.categoryLabel}
+        <div className="locale-label text-[11px] font-semibold uppercase text-[var(--app-text-muted)]">
+          {localizeText(locale, product.categoryLabel, product.categoryLabelKm)}
         </div>
 
         <Link
@@ -79,7 +90,7 @@ export function ProductCard({ product, locale }: { product: PublicProduct; local
           <div>
             <div className="text-base font-bold text-[var(--app-primary)] sm:text-lg">
               {product.variants.length > 0
-                ? `From ${formatCurrency(price, product.currency)}`
+                ? copy.from(formatCurrency(price, product.currency))
                 : formatCurrency(price, product.currency)}
             </div>
             {oldPrice && oldPrice > price ? (
@@ -90,8 +101,12 @@ export function ProductCard({ product, locale }: { product: PublicProduct; local
           </div>
         </div>
 
-        <div className="mt-2 text-xs font-medium text-[var(--app-text-muted)]">
-          {getPublicAvailabilityText(product.available)}
+        <div
+          className={`mt-2 text-xs font-medium ${
+            product.available ? "text-[var(--app-primary-hover)]" : "text-[var(--app-text-muted)]"
+          }`}
+        >
+          {product.available ? copy.available : copy.contactForAvailability}
         </div>
 
         <div className="mt-auto pt-4">
@@ -99,7 +114,7 @@ export function ProductCard({ product, locale }: { product: PublicProduct; local
             product={product}
             imageUrl={image}
             price={price}
-            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-[var(--app-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--app-primary-hover)]"
+            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[var(--app-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--app-primary-hover)]"
           />
         </div>
       </div>

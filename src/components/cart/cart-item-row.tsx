@@ -50,7 +50,7 @@ export function CartItemRow({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="touch-target size-8"
               onClick={onDecrease}
               aria-label={copy.decreaseQuantity(title)}
             >
@@ -60,7 +60,7 @@ export function CartItemRow({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="touch-target size-8"
               onClick={onIncrease}
               aria-label={copy.increaseQuantity(title)}
             >
@@ -75,7 +75,7 @@ export function CartItemRow({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 text-app-text-muted hover:text-app-danger"
+              className="touch-target size-8 text-app-text-muted hover:text-app-danger"
               onClick={onRemove}
               aria-label={copy.removeFromCart(title)}
             >

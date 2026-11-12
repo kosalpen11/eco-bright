@@ -29,6 +29,17 @@ export interface ProductFilters {
   maxPrice?: number | null;
 }
 
+/** Optional technical specs; every field may be null and empty rows are hidden. */
+export interface ProductSpecs {
+  length: string | null;
+  voltage: string | null;
+  wattage: string | null;
+  color: string | null;
+  colorKm: string | null;
+  warranty: string | null;
+  warrantyKm: string | null;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -57,10 +68,12 @@ export interface Product {
   variants: ProductVariant[];
   isActive: boolean;
   sortOrder: number | null;
+  specs?: ProductSpecs;
 }
 
 export interface ProductCategory {
   id: string;
   label: string;
+  labelKm?: string | null;
   count: number;
 }

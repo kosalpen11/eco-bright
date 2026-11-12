@@ -3,8 +3,10 @@
 
 :root {
   color-scheme: light;
-  --font-sans-active: var(--font-outfit);
-  --font-display-active: var(--font-bebas);
+  --font-khmer-fallback: var(--font-noto-sans-khmer), "Noto Sans Khmer", "Khmer Sangam MN",
+    "Khmer OS System", "Khmer OS", "Leelawadee UI", "Khmer UI";
+  --font-sans-active: var(--font-outfit), var(--font-khmer-fallback);
+  --font-display-active: var(--font-bebas), var(--font-khmer-fallback);
   --app-locale-label-tracking: 0.22em;
   --app-locale-chip-tracking: 0.16em;
   --app-locale-display-tracking: 0.05em;
@@ -27,10 +29,11 @@
   --app-secondary-soft: rgba(61, 139, 64, 0.1);
   --app-accent: #f7c948;
   --app-accent-soft: rgba(247, 201, 72, 0.18);
+  --app-accent-text: #8a6500; /* accent yellow for text on light surfaces (5.3:1) */
   --app-text: #172116;
   --app-text-soft: #243223;
-  --app-text-muted: #66736a;
-  --app-text-faint: #819085;
+  --app-text-muted: #606d64; /* was #66736a; now >=4.5:1 on every light surface */
+  --app-text-faint: #67746b; /* was #819085 (3.35:1); now >=4.5:1 on white and --app-bg */
   --app-success: #2f7d32;
   --app-success-soft: rgba(47, 125, 50, 0.12);
   --app-warning: #f7c948;
@@ -60,8 +63,8 @@
 }
 
 :root[data-locale="km"] {
-  --font-sans-active: var(--font-noto-sans-khmer), var(--font-outfit);
-  --font-display-active: var(--font-noto-sans-khmer), var(--font-outfit);
+  --font-sans-active: var(--font-khmer-fallback), var(--font-outfit);
+  --font-display-active: var(--font-khmer-fallback), var(--font-outfit);
   --app-locale-label-tracking: 0.03em;
   --app-locale-chip-tracking: 0.02em;
   --app-locale-display-tracking: 0.01em;
@@ -131,7 +134,8 @@ html {
 body {
   background: var(--app-bg);
   color: var(--app-text);
-  font-family: var(--font-sans-active), var(--font-outfit), sans-serif;
+  /* Khmer fallbacks guarantee Khmer glyphs never render as boxes, even before the web font loads. */
+  font-family: var(--font-sans-active), var(--font-outfit), var(--font-khmer-fallback), system-ui, sans-serif;
   background-image:
     radial-gradient(circle at top right, var(--app-primary-soft), transparent 28%),
     radial-gradient(circle at left 18%, var(--app-secondary-soft), transparent 22%),
@@ -263,4 +267,24 @@ textarea {
   .hide-on-print {
     display: none !important;
   }
+}
+
+/* Visible keyboard focus for every interactive element (mouse clicks don't trigger it). */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+}
+
+/* Enlarges a small control's tap area to 44x44px without changing how it looks. */
+.touch-target {
+  position: relative;
+}
+.touch-target::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }

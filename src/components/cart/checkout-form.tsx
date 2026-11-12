@@ -1,6 +1,8 @@
 "use client";
 
+import { useLocale } from "@/components/locale/locale-provider";
 import { Input } from "@/components/ui/input";
+import { getUiText } from "@/lib/i18n";
 
 interface CheckoutFormProps {
   phone: string;
@@ -31,26 +33,33 @@ export function CheckoutForm({
   errors,
   className,
 }: CheckoutFormProps) {
+  const { locale } = useLocale();
+  const copy = getUiText(locale).checkout;
+  // Validation returns English sentences; show the localized message for each failing field.
+  const phoneError = errors?.phone ? copy.phoneRequired : null;
+  const fulfillmentError = errors?.fulfillmentType ? copy.chooseFulfillment : null;
+  const locationError = errors?.deliveryLocation ? copy.locationRequired : null;
+
   return (
     <div className={`space-y-4 rounded-[1.6rem] border border-app-border bg-app-surface-2 p-4 ${className ?? ""}`}>
       <div>
         <label htmlFor="checkout-phone" className="mb-2 block text-sm font-semibold text-app-text">
-          Phone
+          {copy.phone}
         </label>
         <Input
           id="checkout-phone"
           type="tel"
           value={phone}
           onChange={(event) => onPhoneChange(event.target.value)}
-          placeholder="012 913 xxxx"
+          placeholder={copy.phonePlaceholder}
           className="bg-app-surface"
         />
-        {errors?.phone ? <p className="mt-2 text-xs text-app-danger">{errors.phone}</p> : null}
+        {phoneError ? <p role="alert" className="mt-2 text-xs text-app-danger">{phoneError}</p> : null}
       </div>
 
       <div>
-        <div className="mb-2 block text-sm font-semibold text-app-text">Fulfillment</div>
-        <div className="grid grid-cols-2 gap-3">
+        <div id="checkout-fulfillment" className="mb-2 block text-sm font-semibold text-app-text">{copy.fulfillment}</div>
+        <div role="group" aria-labelledby="checkout-fulfillment" className="grid grid-cols-2 gap-3">
           {(["delivery", "pickup"] as const).map((option) => {
             const selected = fulfillmentType === option;
             return (
@@ -58,6 +67,7 @@ export function CheckoutForm({
                 key={option}
                 type="button"
                 onClick={() => onFulfillmentTypeChange(option)}
+                aria-pressed={selected}
                 className={[
                   "rounded-2xl border px-4 py-3 text-sm font-semibold transition",
                   selected
@@ -65,31 +75,31 @@ export function CheckoutForm({
                     : "border-app-border bg-app-surface text-app-text-muted",
                 ].join(" ")}
               >
-                {option === "delivery" ? "Delivery" : "Pickup"}
+                {option === "delivery" ? copy.delivery : copy.pickup}
               </button>
             );
           })}
         </div>
-        {errors?.fulfillmentType ? (
-          <p className="mt-2 text-xs text-app-danger">{errors.fulfillmentType}</p>
+        {fulfillmentError ? (
+          <p role="alert" className="mt-2 text-xs text-app-danger">{fulfillmentError}</p>
         ) : null}
       </div>
 
       {fulfillmentType === "delivery" ? (
         <div>
           <label htmlFor="checkout-delivery" className="mb-2 block text-sm font-semibold text-app-text">
-            Delivery location
+            {copy.deliveryLocation}
           </label>
           <Input
             id="checkout-delivery"
             type="text"
             value={deliveryLocation}
             onChange={(event) => onDeliveryLocationChange(event.target.value)}
-            placeholder="Phnom Penh, Toul Kork"
+            placeholder={copy.deliveryPlaceholder}
             className="bg-app-surface"
           />
-          {errors?.deliveryLocation ? (
-            <p className="mt-2 text-xs text-app-danger">{errors.deliveryLocation}</p>
+          {locationError ? (
+            <p role="alert" className="mt-2 text-xs text-app-danger">{locationError}</p>
           ) : null}
         </div>
       ) : null}
@@ -97,14 +107,14 @@ export function CheckoutForm({
       {fulfillmentType === "pickup" ? (
         <div>
           <label htmlFor="checkout-pickup" className="mb-2 block text-sm font-semibold text-app-text">
-            Pickup note
+            {copy.pickupNote}
           </label>
           <Input
             id="checkout-pickup"
             type="text"
             value={pickupNote}
             onChange={(event) => onPickupNoteChange(event.target.value)}
-            placeholder="Pickup at shop"
+            placeholder={copy.pickupDefault}
             className="bg-app-surface"
           />
         </div>

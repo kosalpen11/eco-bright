@@ -44,6 +44,7 @@ export function Pagination({
   const searchParams = useSearchParams();
   const { locale } = useLocale();
   const copy = getUiText(locale).catalog;
+  const pageCopy = getUiText(locale).catalogPage;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -70,15 +71,15 @@ export function Pagination({
   return (
     <nav
       className="rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface)] p-4 shadow-[var(--app-shadow-surface)]"
-      aria-label="Pagination"
+      aria-label={pageCopy.pagination}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-sm font-semibold text-[var(--app-text)]">
-            Showing {startItem}-{endItem} of {total}
+            {pageCopy.showingRange(startItem, endItem, total)}
           </div>
           <div className="text-xs text-[var(--app-text-muted)]">
-            Page {page} of {totalPages}
+            {pageCopy.pageOf(page, totalPages)}
           </div>
         </div>
 

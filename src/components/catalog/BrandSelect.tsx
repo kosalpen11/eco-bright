@@ -49,6 +49,7 @@ export function BrandSelect({
         {copy.brand}
       </div>
       <select
+        aria-label={copy.brand}
         key={value}
         defaultValue={value}
         onChange={(e) => go(e.currentTarget.value)}
