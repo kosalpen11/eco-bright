@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 import { cache, Suspense } from "react";
 
 import { ProductDetailClient } from "@/components/catalog/ProductDetailClient";
 import { RelatedProducts } from "@/components/catalog/product-detail/RelatedProducts";
 import {
   getCachedCategories,
-  getCachedProductById,
+  getCachedProductBySlugOrId,
   getCachedProducts,
 } from "@/lib/db/cached-products";
 import { getUiText, localizeText } from "@/lib/i18n";
@@ -74,10 +75,15 @@ function RelatedProductsFallback() {
   );
 }
 
-// Dedupe the product query between generateMetadata and the page within one request.
-const getPublicProduct = cache(async (id: string) =>
-  getPublicProductOrNotFound(await getCachedProductById(id)),
+// `id` is the URL segment: the public slug, or a legacy product id from old links.
+// Dedupe the query between generateMetadata and the page within one request.
+const getPublicProduct = cache(async (key: string) =>
+  getPublicProductOrNotFound(await getCachedProductBySlugOrId(decodeURIComponent(key))),
 );
+
+function productPath(product: { slug: string }) {
+  return `/products/${encodeURIComponent(product.slug)}`;
+}
 
 export async function generateMetadata({
   params,
@@ -91,7 +97,7 @@ export async function generateMetadata({
   const description = toMetaDescription(
     product.description?.trim() || product.descriptionKm?.trim() || PRODUCT_DESCRIPTION_FALLBACK_KM,
   );
-  const canonical = `/products/${encodeURIComponent(product.id)}`;
+  const canonical = productPath(product);
   const productImage = toAbsoluteHttpsImageUrl(product.imageUrls[0] ?? product.imageUrl);
   const ogImage = productImage
     ? { url: productImage, alt: product.name }
@@ -124,8 +130,14 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const [product, categories, locale] = await Promise.all([
-    getPublicProduct(id),
+  const product = await getPublicProduct(id);
+
+  // Old links (/products/Grace_LED-Bulb) keep working: 308 to the public slug.
+  if (decodeURIComponent(id) !== product.slug) {
+    permanentRedirect(productPath(product));
+  }
+
+  const [categories, locale] = await Promise.all([
     getCachedCategories().catch(() => []),
     getRequestLocale(),
   ]);
@@ -147,7 +159,7 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
     <ProductDetailClient
       product={localizedProduct}
       categories={categoryChips}
-      pageUrl={`${SITE_URL}/products/${encodeURIComponent(product.id)}`}
+      pageUrl={`${SITE_URL}${productPath(product)}`}
       related={
         <Suspense fallback={<RelatedProductsFallback />}>
           <RelatedProductsSection category={product.category} excludeId={product.id} locale={locale} />

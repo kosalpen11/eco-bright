@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
 import { getUiText } from "@/lib/i18n";
 
 export function SearchInput() {
-  const router = useRouter();
+  const router = useCatalogRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

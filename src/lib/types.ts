@@ -42,6 +42,9 @@ export interface ProductSpecs {
 
 export interface Product {
   id: string;
+  /** Public URL slug (products.slug_public); null falls back to id. */
+  slug?: string | null;
+  brand?: string | null;
   title: string;
   titleKm: string | null;
   name: string;

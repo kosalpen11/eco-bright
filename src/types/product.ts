@@ -18,7 +18,12 @@ export type ProductCategory =
   | "string-lights"
   | "drivers-accessories"
   | "fans"
-  | "wire-cables";
+  | "wire-cables"
+  // Shop categories after the Nov 2026 cleanup (categories table slugs).
+  | "lights"
+  | "cables"
+  | "solar"
+  | "accessories";
 
 export const PRODUCT_CATEGORIES = [
   { value: "led-bulbs", label: "LED Bulbs", labelKm: "អំពូល LED" },
@@ -38,6 +43,10 @@ export const PRODUCT_CATEGORIES = [
   { value: "string-lights", label: "String Lights", labelKm: "ភ្លើងខ្សែតុបតែង" },
   { value: "drivers-accessories", label: "Drivers & Accessories", labelKm: "ឌ្រាយវឺរ និងគ្រឿងបន្លាស់" },
   { value: "fans", label: "Fans", labelKm: "កង្ហារ" },
+  { value: "lights", label: "Lights", labelKm: "អំពូលភ្លើង" },
+  { value: "cables", label: "Cables", labelKm: "ខ្សែភ្លើង" },
+  { value: "solar", label: "Solar", labelKm: "សូឡា" },
+  { value: "accessories", label: "Accessories", labelKm: "គ្រឿងបន្លាស់" },
   { value: "wire-cables", label: "Wire & Cables", labelKm: "ខ្សែភ្លើង និងខ្សែកាប" },
 ] as const satisfies ReadonlyArray<{ value: ProductCategory; label: string; labelKm: string }>;
 

@@ -5,7 +5,7 @@ const categoryLookup = new Map(
 );
 
 const sourceCategoryRemaps = {
-  accessories: "drivers-accessories",
+  // "accessories" is a shop category since the Nov 2026 cleanup, so it is no longer remapped.
   batteries: "solar-systems",
   bulbs: "led-bulbs",
   "batten-lights": "linear-lights",
@@ -35,6 +35,10 @@ const defaultCategoryLabels = {
   "drivers-accessories": "Driver / Accessory",
   fans: "Fan",
   "wire-cables": "Wire / Cable",
+  lights: "Light",
+  cables: "Cable",
+  solar: "Solar",
+  accessories: "Accessory",
 } as const satisfies Record<ProductCategory, string>;
 
 const genericTitlePrefixes = {
@@ -56,6 +60,10 @@ const genericTitlePrefixes = {
   "drivers-accessories": "Driver / Accessory",
   fans: "Fan",
   "wire-cables": "Wire / Cable",
+  lights: "Light",
+  cables: "Cable",
+  solar: "Solar",
+  accessories: "Accessory",
 } as const satisfies Record<ProductCategory, string>;
 
 export function isProductCategory(value: string): value is ProductCategory {

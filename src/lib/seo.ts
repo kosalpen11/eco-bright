@@ -13,7 +13,11 @@ export const DEFAULT_OG_IMAGE = {
 } as const;
 
 export const SITE_DESCRIPTION_KM =
-  "ECOBright ផ្គត់ផ្គង់អំពូល LED និងផលិតផលសូឡាគុណភាពខ្ពស់ នៅកម្ពុជា។ កុម្ម៉ង់ងាយៗតាម Telegram។";
+  "អំពូល LED កង្ហារប្រើថ្ម ខ្សែភ្លើង ផលិតផលសូឡា និងគ្រឿងបន្លាស់ ពី ECOBright។ មើលតម្លៃ ជ្រើសរើសតាមប្រភេទ ហើយបញ្ជាទិញផ្ទាល់តាម Telegram។ ដឹកជញ្ជូនក្នុងភ្នំពេញ។";
+
+/** Listing page (/products) description. */
+export const CATALOG_DESCRIPTION_KM =
+  "ទំនិញទាំងអស់របស់ ECOBright៖ អំពូល LED កង្ហារប្រើថ្ម ខ្សែភ្លើង ផលិតផលសូឡា និងគ្រឿងបន្លាស់ ម៉ាក Grace, Fuji, Fixer និង One។ ច្រោះតាមប្រភេទ ម៉ាក និងតម្លៃ ហើយបញ្ជាទិញតាម Telegram។ ដឹកជញ្ជូនក្នុងភ្នំពេញ។";
 
 export const PRODUCT_DESCRIPTION_FALLBACK_KM =
   "ផលិតផល LED និងសូឡាគុណភាពខ្ពស់ពី ECOBright។ កុម្ម៉ង់ឥឡូវនេះតាម Telegram។";

@@ -95,11 +95,14 @@ export function SiteHeader({
   categories,
   activeCategory,
   loadingCategories = false,
+  showSearch = true,
 }: {
   categories?: ProductCategory[];
   activeCategory?: string;
   /** Show same-size chip placeholders (used by loading.tsx skeletons to avoid layout shift). */
   loadingCategories?: boolean;
+  /** Hide the header search when the page renders its own (avoids two search boxes). */
+  showSearch?: boolean;
 }) {
   const { locale } = useLocale();
   const copy = getUiText(locale).site;
@@ -138,10 +141,15 @@ export function SiteHeader({
             </div>
           </Link>
 
-          <div className="hidden min-w-0 flex-1 sm:block">
-            <SearchInput />
-          </div>
+          {showSearch ? (
+            <div className="hidden min-w-0 flex-1 sm:block">
+              <SearchInput />
+            </div>
+          ) : (
+            <div className="hidden flex-1 sm:block" />
+          )}
 
+          {showSearch ? (
           <button
             type="button"
             onClick={() => setMobileSearchOpen((open) => !open)}
@@ -152,6 +160,7 @@ export function SiteHeader({
           >
             {mobileSearchOpen ? <X className="size-5" /> : <Search className="size-5" />}
           </button>
+          ) : null}
 
           <HeaderCartButton label={copy.cart} />
 
@@ -167,7 +176,7 @@ export function SiteHeader({
           </a>
         </div>
 
-        {mobileSearchOpen ? (
+        {showSearch && mobileSearchOpen ? (
           <div id="mobile-header-search" className="mx-auto w-full max-w-7xl px-3 pb-2.5 sm:hidden">
             <SearchInput />
           </div>

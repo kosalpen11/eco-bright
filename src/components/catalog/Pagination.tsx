@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
 import { getUiText } from "@/lib/i18n";
 
@@ -39,7 +40,7 @@ export function Pagination({
   page: number;
   pageSize: number;
 }) {
-  const router = useRouter();
+  const router = useCatalogRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { locale } = useLocale();
@@ -65,7 +66,7 @@ export function Pagination({
     }
 
     const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false, scrollToResults: true });
   }
 
   return (

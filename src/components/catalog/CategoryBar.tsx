@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 
 import type { ProductCategory } from "@/lib/types";
 
@@ -11,7 +12,7 @@ export function CategoryBar({
   categories: ProductCategory[];
   activeCategory: string;
 }) {
-  const router = useRouter();
+  const router = useCatalogRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
