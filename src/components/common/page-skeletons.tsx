@@ -60,40 +60,27 @@ export function ProductDetailSkeleton() {
   );
 }
 
-/** Mirrors the catalog layout: filter card, product grid and (desktop) cart rail. */
-export function CatalogSkeleton() {
+/** Product grid placeholder shown while a catalog filter or page change loads. Same shape as ProductCard. */
+export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="min-h-screen bg-[var(--app-bg)]" aria-busy="true">
-      <LoadingStatus />
-      <SiteHeader loadingCategories />
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-3 py-4 sm:px-4 sm:py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-4">
-          <div className="space-y-4 rounded-[1.6rem] border border-[var(--app-border)] bg-white p-4 shadow-[var(--app-shadow-surface)] sm:p-5">
-            <div className={`h-4 w-32 ${block}`} />
-            <div className={`h-7 w-48 ${block}`} />
-            <div className={`h-12 w-full rounded-full ${block}`} />
-            <div className="flex flex-wrap gap-3">
-              <div className={`h-11 w-40 rounded-full ${block}`} />
-              <div className={`h-11 w-56 rounded-full ${block}`} />
-              <div className={`h-11 w-36 rounded-full ${block}`} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="overflow-hidden rounded-[1.4rem] border border-[var(--app-border)] bg-white">
-                <div className="aspect-[0.92] animate-pulse bg-[var(--app-surface)] motion-reduce:animate-none" />
-                <div className="space-y-2 p-3.5">
-                  <div className={`h-3 w-16 ${block}`} />
-                  <div className={`h-4 w-full ${block}`} />
-                  <div className={`h-5 w-20 ${block}`} />
-                  <div className={`mt-3 h-11 w-full rounded-full ${block}`} />
-                </div>
-              </div>
-            ))}
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          className="flex flex-col overflow-hidden rounded-[1.4rem] border border-[var(--app-border)] bg-white shadow-[var(--app-shadow-card)]"
+        >
+          <div className="aspect-[0.92] animate-pulse bg-[var(--app-surface)] motion-reduce:animate-none" />
+          <div className="space-y-2 p-3.5">
+            <div className={`h-3 w-16 ${block}`} />
+            <div className={`h-4 w-full ${block}`} />
+            <div className={`h-4 w-2/3 ${block}`} />
+            <div className={`mt-3 h-5 w-24 ${block}`} />
+            <div className={`h-6 w-20 rounded-full ${block}`} />
+            <div className={`mt-4 h-11 w-full rounded-full ${block}`} />
+            <div className={`h-11 w-full rounded-full ${block}`} />
           </div>
         </div>
-        <div className="hidden h-[32rem] animate-pulse rounded-[1.6rem] border border-[var(--app-border)] bg-[var(--app-surface-2)] motion-reduce:animate-none lg:block" />
-      </div>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { getBrands, getSitemapProducts } from "@/lib/db/products";
+import { getSitemapProducts } from "@/lib/db/products";
 import { SITE_URL } from "@/lib/seo";
 
 // Regenerate at most hourly so new products show up without a redeploy.
@@ -14,20 +14,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [products, brands] = await Promise.all([getSitemapProducts(), getBrands()]);
+    const products = await getSitemapProducts();
 
     return [
       ...staticEntries,
-      ...brands
-        .filter((brand) => /^[a-z0-9-]{1,32}$/.test(brand.id)) // same rule as catalog/[brand]
-        .map((brand) => ({
-          url: `${SITE_URL}/catalog/${brand.id}`,
-          lastModified: now,
-          changeFrequency: "weekly" as const,
-          priority: 0.7,
-        })),
       ...products.map((product) => ({
-        url: `${SITE_URL}/products/${encodeURIComponent(product.id)}`,
+        url: `${SITE_URL}/products/${encodeURIComponent(product.slug)}`,
         lastModified: product.updatedAt ?? now,
         changeFrequency: "weekly" as const,
         priority: 0.8,

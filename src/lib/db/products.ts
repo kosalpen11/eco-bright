@@ -26,67 +26,62 @@ function getSql(): SqlClient {
   return cachedSql;
 }
 
-function buildWhereClause(sql: SqlClient, filters: ProductFilters) {
-  const parts = [sql`p.is_active = true`, sql`p.id <> ''`];
+type FilterParts = { base: ReturnType<SqlClient>[]; category: ReturnType<SqlClient> | null; brand: ReturnType<SqlClient> | null };
 
-  const brand = (filters.brand ?? "").trim();
-  if (brand) {
-    const normalized = brand.toLowerCase();
-    // Product "brand" is derived from id prefix: grace_001 => brand "grace".
-    // Underscore is a LIKE wildcard, so escape it to match the literal `_`.
-    const pattern = `${normalized}\\_%`;
-    parts.push(sql`LOWER(p.id) LIKE ${pattern} ESCAPE '\\'`);
-  }
+function joinAnd(sql: SqlClient, parts: ReturnType<SqlClient>[]) {
+  let clause = sql`TRUE`;
+  for (const part of parts) clause = sql`${clause} AND ${part}`;
+  return clause;
+}
 
-  if (filters.category) {
-    parts.push(sql`p.category = ${filters.category}`);
-  }
+/**
+ * Splits filters into the "base" set (search, price, active) and the two facet filters.
+ * Category counts apply the brand filter (not their own); brand counts apply the category
+ * filter. So every count equals what the list shows after clicking that chip.
+ */
+function buildFilterParts(sql: SqlClient, filters: ProductFilters): FilterParts {
+  const base = [sql`p.is_active = true`, sql`p.id <> ''`];
 
   const q = (filters.q ?? "").trim();
   if (q) {
     const pattern = `%${q}%`;
-    parts.push(
+    base.push(
       sql`(
         p.title ILIKE ${pattern}
         OR COALESCE(p.use_case, '') ILIKE ${pattern}
         OR COALESCE(p.description, '') ILIKE ${pattern}
+        OR COALESCE(p.brand, '') ILIKE ${pattern}
+        OR COALESCE(p.slug_public, '') ILIKE ${pattern}
         OR p.id ILIKE ${pattern}
         OR EXISTS (
-          SELECT 1
-          FROM unnest(COALESCE(p.tags, ARRAY[]::text[])) AS tag
-          WHERE tag ILIKE ${pattern}
+          SELECT 1 FROM unnest(COALESCE(p.tags, ARRAY[]::text[])) AS tag WHERE tag ILIKE ${pattern}
         )
       )`,
     );
   }
+  if (typeof filters.minPrice === "number") base.push(sql`p.price >= ${filters.minPrice}`);
+  if (typeof filters.maxPrice === "number") base.push(sql`p.price <= ${filters.maxPrice}`);
 
-  if (typeof filters.minPrice === "number") {
-    parts.push(sql`p.price >= ${filters.minPrice}`);
-  }
-
-  if (typeof filters.maxPrice === "number") {
-    parts.push(sql`p.price <= ${filters.maxPrice}`);
-  }
-
-  let where = sql`WHERE ${parts[0]}`;
-  for (let i = 1; i < parts.length; i += 1) {
-    where = sql`${where} AND ${parts[i]}`;
-  }
-
-  return where;
+  const brand = (filters.brand ?? "").trim();
+  const category = (filters.category ?? "").trim();
+  return {
+    base,
+    category: category ? sql`p.category = ${category}` : null,
+    brand: brand ? sql`lower(p.brand) = ${brand.toLowerCase()}` : null,
+  };
 }
 
 function buildOrderClause(sql: SqlClient, sort: ProductFilters["sort"]) {
   switch (sort) {
     case "price-asc":
-      return sql`ORDER BY price ASC, title ASC`;
+      return sql`ORDER BY p.price ASC, p.title ASC, p.id ASC`;
     case "price-desc":
-      return sql`ORDER BY price DESC, title ASC`;
+      return sql`ORDER BY p.price DESC, p.title ASC, p.id ASC`;
     case "name-asc":
-      return sql`ORDER BY title ASC`;
+      return sql`ORDER BY p.title ASC, p.id ASC`;
     case "default":
     default:
-      return sql`ORDER BY sort_order NULLS LAST, title ASC`;
+      return sql`ORDER BY p.sort_order NULLS LAST, p.title ASC, p.id ASC`;
   }
 }
 
@@ -260,246 +255,19 @@ function toVariants(value: unknown): ProductVariant[] {
   });
 }
 
-export async function getProducts(filters: ProductFilters): Promise<{
-  products: Product[];
-  total: number;
-  page: number;
-  pageSize: number;
-}> {
-  const sql = getSql();
-
-  const page = Math.max(1, Math.floor(filters.page ?? 1));
-  const offset = (page - 1) * PAGE_SIZE;
-  const where = buildWhereClause(sql, filters);
-  const order = buildOrderClause(sql, filters.sort ?? "default");
-
-  const [countRows, productRows] = await sql.transaction([
-    sql`SELECT COUNT(*)::int AS count FROM products p ${where}`,
-    sql`
-      SELECT
-        p.id,
-        p.title,
-        p.title_km AS "titleKm",
-        COALESCE(to_jsonb(p) ->> 'name', p.title) AS name,
-        p.category,
-        p.category_label AS "categoryLabel",
-        p.category_label_km AS "categoryLabelKm",
-        p.description,
-        p.description_km AS "descriptionKm",
-        p.price,
-        p.old_price AS "oldPrice",
-        p.badge,
-        p.tags,
-        p.pack_qty::text AS "packQty",
-        p.hole_size AS "holeSize",
-        p.use_case AS "useCase",
-        p.use_case_km AS "useCaseKm",
-        p.image_url AS "imageUrl",
-        COALESCE(p.image_urls, ARRAY[]::text[]) AS "imageUrls",
-        p.currency,
-        NULLIF(to_jsonb(p) ->> 'stock_qty', '') AS "stockQty",
-        p.in_stock AS "inStock",
-        NULLIF(to_jsonb(p) ->> 'rating', '')::numeric AS rating,
-        COALESCE(
-          NULLIF(product_attribute_data.attributes, '{}'::jsonb),
-          COALESCE(to_jsonb(p) -> 'attributes', '{}'::jsonb)
-        ) AS attributes,
-        COALESCE(
-          NULLIF(variant_data.variants, '[]'::jsonb),
-          COALESCE(to_jsonb(p) -> 'variants', '[]'::jsonb)
-        ) AS variants,
-        p.is_active AS "isActive",
-        p.sort_order AS "sortOrder",
-      -- Spec columns are optional (migration 0015); to_jsonb keeps this working before it runs.
-      NULLIF(to_jsonb(p) ->> 'spec_length', '') AS "specLength",
-      NULLIF(to_jsonb(p) ->> 'spec_voltage', '') AS "specVoltage",
-      NULLIF(to_jsonb(p) ->> 'spec_wattage', '') AS "specWattage",
-      NULLIF(to_jsonb(p) ->> 'spec_color', '') AS "specColor",
-      NULLIF(to_jsonb(p) ->> 'spec_color_km', '') AS "specColorKm",
-      NULLIF(to_jsonb(p) ->> 'warranty', '') AS "warranty",
-      NULLIF(to_jsonb(p) ->> 'warranty_km', '') AS "warrantyKm"
-      FROM products p
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          jsonb_object_agg(attribute_rows.name, attribute_rows.value_json),
-          '{}'::jsonb
-        ) AS attributes
-        FROM (
-          SELECT
-            pa.name,
-            CASE
-              WHEN COUNT(DISTINCT pav.value) = 1 THEN to_jsonb(MIN(pav.value))
-              ELSE to_jsonb(array_agg(DISTINCT pav.value ORDER BY pav.value))
-            END AS value_json
-          FROM product_variants pv
-          INNER JOIN product_variant_attribute_values pvav
-            ON pvav.product_variant_id = pv.id
-          INNER JOIN product_attribute_values pav
-            ON pav.id = pvav.product_attribute_value_id
-          INNER JOIN product_attributes pa
-            ON pa.id = pav.product_attribute_id
-          WHERE pv.product_id = p.id
-            AND pv.is_active = true
-          GROUP BY pa.name
-        ) AS attribute_rows
-      ) AS product_attribute_data ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          jsonb_agg(
-            jsonb_build_object(
-              'id', pv.id,
-              'sku', pv.sku,
-              'title', pv.title,
-              'label', COALESCE(NULLIF(pv.title, ''), NULLIF(pv.sku, ''), pv.id),
-              'price', pv.price,
-              'old_price', pv.old_price,
-              'currency', pv.currency,
-              'stock_qty', pv.stock_qty,
-              'in_stock', CASE WHEN pv.stock_qty > 0 THEN true ELSE false END,
-              'image_url', pv.image_url,
-              'sort_order', pv.sort_order,
-              'is_active', pv.is_active,
-              'attributes', COALESCE(variant_attribute_data.attributes, '{}'::jsonb)
-            )
-            ORDER BY pv.sort_order ASC, pv.title ASC, pv.id ASC
-          ),
-          '[]'::jsonb
-        ) AS variants
-        FROM product_variants pv
-        LEFT JOIN LATERAL (
-          SELECT COALESCE(
-            jsonb_object_agg(attribute_rows.name, attribute_rows.value_json),
-            '{}'::jsonb
-          ) AS attributes
-          FROM (
-            SELECT
-              pa.name,
-              CASE
-                WHEN COUNT(DISTINCT pav.value) = 1 THEN to_jsonb(MIN(pav.value))
-                ELSE to_jsonb(array_agg(DISTINCT pav.value ORDER BY pav.value))
-              END AS value_json
-            FROM product_variant_attribute_values pvav
-            INNER JOIN product_attribute_values pav
-              ON pav.id = pvav.product_attribute_value_id
-            INNER JOIN product_attributes pa
-              ON pa.id = pav.product_attribute_id
-            WHERE pvav.product_variant_id = pv.id
-            GROUP BY pa.name
-          ) AS attribute_rows
-        ) AS variant_attribute_data ON true
-        WHERE pv.product_id = p.id
-      ) AS variant_data ON true
-      ${where}
-      ${order}
-      LIMIT ${PAGE_SIZE}
-      OFFSET ${offset}
-    `,
-  ]);
-
-  const total = Number(countRows?.[0]?.count ?? 0);
-
-  const products: Product[] = (productRows ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    titleKm: row.titleKm ?? null,
-    name: row.name,
-    category: row.category,
-    categoryLabel: row.categoryLabel,
-    categoryLabelKm: row.categoryLabelKm ?? null,
-    description: row.description,
-    descriptionKm: row.descriptionKm ?? null,
-    price: toNumber(row.price),
-    oldPrice: toNullableNumber(row.oldPrice),
-    badge: row.badge ?? null,
-    tags: toStringArray(row.tags),
-    packQty: row.packQty ?? null,
-    holeSize: row.holeSize ?? null,
-    useCase: row.useCase ?? null,
-    useCaseKm: row.useCaseKm ?? null,
-    imageUrl: row.imageUrl ?? null,
-    imageUrls:
-      toStringArray(row.imageUrls).length > 0
-        ? toStringArray(row.imageUrls)
-        : row.imageUrl
-          ? [row.imageUrl]
-          : [],
-    currency: row.currency,
-    stockQty: toStockQty(row.stockQty),
-    inStock: row.inStock,
-    rating: toNullableNumber(row.rating),
-    attributes: toAttributes(row.attributes),
-    variants: toVariants(row.variants),
-    isActive: row.isActive,
-    sortOrder: row.sortOrder ?? null,
-    specs: toSpecs(row),
-  }));
-
-  return { products, total, page, pageSize: PAGE_SIZE };
-}
-
-export async function getCategories(filters?: { brand?: string | null }): Promise<ProductCategory[]> {
-  const sql = getSql();
-
-  // Brand is optional; if the column doesn't exist yet, COALESCE handles it.
-  const brand = (filters?.brand ?? "").trim();
-  const brandClause = brand
-    ? sql`LOWER(p.id) LIKE ${`${brand.toLowerCase()}\\_%`} ESCAPE '\\'`
-    : sql`TRUE`;
-
-  const rows = await sql`
-    SELECT
-      category AS id,
-      MIN(category_label) AS label,
-      MIN(NULLIF(category_label_km, '')) AS "labelKm",
-      COUNT(*)::int AS count
-    FROM products p
-    WHERE p.is_active = true AND ${brandClause}
-    GROUP BY category
-    ORDER BY label ASC
-  `;
-
-  return rows.map((row) => ({
-    id: row.id,
-    label: row.label,
-    labelKm: row.labelKm ?? null,
-    count: Number(row.count ?? 0),
-  }));
-}
-
-export async function getBrands(): Promise<Array<{ id: string; label: string; count: number }>> {
-  const sql = getSql();
-
-  const rows = await sql`
-    SELECT
-      LOWER(split_part(p.id, '_', 1)) AS id,
-      COUNT(*)::int AS count
-    FROM products p
-    WHERE p.is_active = true
-      AND p.id <> ''
-      AND position('_' in p.id) > 0
-    GROUP BY 1
-    ORDER BY 1 ASC
-  `;
-
-  return rows.map((row) => ({
-    id: row.id,
-    label: row.id ? row.id.charAt(0).toUpperCase() + row.id.slice(1) : row.id,
-    count: Number(row.count ?? 0),
-  }));
-}
-
-export async function getProductById(id: string): Promise<Product | null> {
-  const sql = getSql();
-
-  const rows = await sql`
+/** Columns + variant/attribute joins shared by the listing and the product page. Alias must be `p`. */
+function productSelect(sql: SqlClient) {
+  return sql`
     SELECT
       p.id,
+      p.slug_public AS "slug",
+      p.brand,
       p.title,
       p.title_km AS "titleKm",
       COALESCE(to_jsonb(p) ->> 'name', p.title) AS name,
       p.category,
-      p.category_label AS "categoryLabel",
-      p.category_label_km AS "categoryLabelKm",
+      COALESCE(c.name, p.category_label) AS "categoryLabel",
+      COALESCE(c.name_km, p.category_label_km) AS "categoryLabelKm",
       p.description,
       p.description_km AS "descriptionKm",
       p.price,
@@ -513,33 +281,28 @@ export async function getProductById(id: string): Promise<Product | null> {
       p.image_url AS "imageUrl",
       COALESCE(p.image_urls, ARRAY[]::text[]) AS "imageUrls",
       p.currency,
-      NULLIF(to_jsonb(p) ->> 'stock_qty', '') AS "stockQty",
+      p.stock_qty AS "stockQty",
       p.in_stock AS "inStock",
-      NULLIF(to_jsonb(p) ->> 'rating', '')::numeric AS rating,
-      COALESCE(
-        NULLIF(product_attribute_data.attributes, '{}'::jsonb),
-        COALESCE(to_jsonb(p) -> 'attributes', '{}'::jsonb)
-      ) AS attributes,
-      COALESCE(
-        NULLIF(variant_data.variants, '[]'::jsonb),
-        COALESCE(to_jsonb(p) -> 'variants', '[]'::jsonb)
-      ) AS variants,
+      p.rating,
+      COALESCE(NULLIF(product_attribute_data.attributes, '{}'::jsonb), '{}'::jsonb) AS attributes,
+      COALESCE(variant_data.variants, '[]'::jsonb) AS variants,
       p.is_active AS "isActive",
       p.sort_order AS "sortOrder",
-      -- Spec columns are optional (migration 0015); to_jsonb keeps this working before it runs.
-      NULLIF(to_jsonb(p) ->> 'spec_length', '') AS "specLength",
-      NULLIF(to_jsonb(p) ->> 'spec_voltage', '') AS "specVoltage",
-      NULLIF(to_jsonb(p) ->> 'spec_wattage', '') AS "specWattage",
-      NULLIF(to_jsonb(p) ->> 'spec_color', '') AS "specColor",
-      NULLIF(to_jsonb(p) ->> 'spec_color_km', '') AS "specColorKm",
-      NULLIF(to_jsonb(p) ->> 'warranty', '') AS "warranty",
-      NULLIF(to_jsonb(p) ->> 'warranty_km', '') AS "warrantyKm"
-    FROM products p
+      p.spec_length AS "specLength",
+      p.spec_voltage AS "specVoltage",
+      p.spec_wattage AS "specWattage",
+      p.spec_color AS "specColor",
+      p.spec_color_km AS "specColorKm",
+      p.warranty AS "warranty",
+      p.warranty_km AS "warrantyKm"
+  `;
+}
+
+function productJoins(sql: SqlClient) {
+  return sql`
+    LEFT JOIN categories c ON c.id = p.category_id
     LEFT JOIN LATERAL (
-      SELECT COALESCE(
-        jsonb_object_agg(attribute_rows.name, attribute_rows.value_json),
-        '{}'::jsonb
-      ) AS attributes
+      SELECT COALESCE(jsonb_object_agg(attribute_rows.name, attribute_rows.value_json), '{}'::jsonb) AS attributes
       FROM (
         SELECT
           pa.name,
@@ -548,14 +311,10 @@ export async function getProductById(id: string): Promise<Product | null> {
             ELSE to_jsonb(array_agg(DISTINCT pav.value ORDER BY pav.value))
           END AS value_json
         FROM product_variants pv
-        INNER JOIN product_variant_attribute_values pvav
-          ON pvav.product_variant_id = pv.id
-        INNER JOIN product_attribute_values pav
-          ON pav.id = pvav.product_attribute_value_id
-        INNER JOIN product_attributes pa
-          ON pa.id = pav.product_attribute_id
-        WHERE pv.product_id = p.id
-          AND pv.is_active = true
+        INNER JOIN product_variant_attribute_values pvav ON pvav.product_variant_id = pv.id
+        INNER JOIN product_attribute_values pav ON pav.id = pvav.product_attribute_value_id
+        INNER JOIN product_attributes pa ON pa.id = pav.product_attribute_id
+        WHERE pv.product_id = p.id AND pv.is_active = true
         GROUP BY pa.name
       ) AS attribute_rows
     ) AS product_attribute_data ON true
@@ -583,10 +342,7 @@ export async function getProductById(id: string): Promise<Product | null> {
       ) AS variants
       FROM product_variants pv
       LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          jsonb_object_agg(attribute_rows.name, attribute_rows.value_json),
-          '{}'::jsonb
-        ) AS attributes
+        SELECT COALESCE(jsonb_object_agg(attribute_rows.name, attribute_rows.value_json), '{}'::jsonb) AS attributes
         FROM (
           SELECT
             pa.name,
@@ -595,74 +351,229 @@ export async function getProductById(id: string): Promise<Product | null> {
               ELSE to_jsonb(array_agg(DISTINCT pav.value ORDER BY pav.value))
             END AS value_json
           FROM product_variant_attribute_values pvav
-          INNER JOIN product_attribute_values pav
-            ON pav.id = pvav.product_attribute_value_id
-          INNER JOIN product_attributes pa
-            ON pa.id = pav.product_attribute_id
+          INNER JOIN product_attribute_values pav ON pav.id = pvav.product_attribute_value_id
+          INNER JOIN product_attributes pa ON pa.id = pav.product_attribute_id
           WHERE pvav.product_variant_id = pv.id
           GROUP BY pa.name
         ) AS attribute_rows
       ) AS variant_attribute_data ON true
       WHERE pv.product_id = p.id
     ) AS variant_data ON true
-    WHERE p.id = ${id} AND p.is_active = true
-    LIMIT 1
   `;
+}
 
-  const row = rows[0];
-  if (!row) return null;
-
+function mapProductRow(row: Record<string, unknown>): Product {
+  const imageUrls = toStringArray(row.imageUrls);
+  const imageUrl = typeof row.imageUrl === "string" ? row.imageUrl : null;
   return {
-    id: row.id,
-    title: row.title,
-    titleKm: row.titleKm ?? null,
-    name: row.name,
-    category: row.category,
-    categoryLabel: row.categoryLabel,
-    categoryLabelKm: row.categoryLabelKm ?? null,
-    description: row.description,
-    descriptionKm: row.descriptionKm ?? null,
+    id: String(row.id),
+    slug: typeof row.slug === "string" && row.slug ? row.slug : null,
+    brand: typeof row.brand === "string" && row.brand ? row.brand : null,
+    title: String(row.title ?? ""),
+    titleKm: (row.titleKm as string | null) ?? null,
+    name: String(row.name ?? row.title ?? ""),
+    category: String(row.category ?? ""),
+    categoryLabel: String(row.categoryLabel ?? ""),
+    categoryLabelKm: (row.categoryLabelKm as string | null) ?? null,
+    description: String(row.description ?? ""),
+    descriptionKm: (row.descriptionKm as string | null) ?? null,
     price: toNumber(row.price),
     oldPrice: toNullableNumber(row.oldPrice),
-    badge: row.badge ?? null,
+    badge: (row.badge as string | null) ?? null,
     tags: toStringArray(row.tags),
-    packQty: row.packQty ?? null,
-    holeSize: row.holeSize ?? null,
-    useCase: row.useCase ?? null,
-    useCaseKm: row.useCaseKm ?? null,
-    imageUrl: row.imageUrl ?? null,
-    imageUrls:
-      toStringArray(row.imageUrls).length > 0
-        ? toStringArray(row.imageUrls)
-        : row.imageUrl
-          ? [row.imageUrl]
-          : [],
-    currency: row.currency,
+    packQty: (row.packQty as string | null) ?? null,
+    holeSize: (row.holeSize as string | null) ?? null,
+    useCase: (row.useCase as string | null) ?? null,
+    useCaseKm: (row.useCaseKm as string | null) ?? null,
+    imageUrl,
+    imageUrls: imageUrls.length > 0 ? imageUrls : imageUrl ? [imageUrl] : [],
+    currency: String(row.currency ?? "USD"),
     stockQty: toStockQty(row.stockQty),
-    inStock: row.inStock,
+    inStock: Boolean(row.inStock),
     rating: toNullableNumber(row.rating),
     attributes: toAttributes(row.attributes),
     variants: toVariants(row.variants),
-    isActive: row.isActive,
-    sortOrder: row.sortOrder ?? null,
+    isActive: Boolean(row.isActive),
+    sortOrder: (row.sortOrder as number | null) ?? null,
     specs: toSpecs(row),
   };
 }
 
-/** Active product ids with last-modified time, for app/sitemap.ts. */
-export async function getSitemapProducts(): Promise<Array<{ id: string; updatedAt: Date | null }>> {
+export interface CatalogFacet {
+  id: string;
+  label: string;
+  labelKm: string | null;
+  count: number;
+}
+
+export interface CatalogListing {
+  products: Product[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Non-empty categories, counted with every filter except category. */
+  categories: CatalogFacet[];
+  /** Brands with products, counted with every filter except brand. */
+  brands: CatalogFacet[];
+}
+
+/**
+ * The listing in ONE statement: product page, total and both facet counts all come from
+ * the same filtered set, so chip counts always match the list.
+ */
+export async function getCatalogListing(filters: ProductFilters): Promise<CatalogListing> {
   const sql = getSql();
+  const page = Math.max(1, Math.floor(filters.page ?? 1));
+  const offset = (page - 1) * PAGE_SIZE;
+  const parts = buildFilterParts(sql, filters);
+  const order = buildOrderClause(sql, filters.sort ?? "default");
+  const baseWhere = joinAnd(sql, parts.base);
+  const categoryCond = parts.category ?? sql`TRUE`;
+  const brandCond = parts.brand ?? sql`TRUE`;
 
   const rows = await sql`
-    SELECT p.id, p.updated_at AS "updatedAt"
-    FROM products p
-    WHERE p.is_active = true
-      AND p.id <> ''
-    ORDER BY p.sort_order ASC NULLS LAST, p.id ASC
+    WITH filtered AS (
+      SELECT p.* FROM products p
+      WHERE ${baseWhere} AND ${categoryCond} AND ${brandCond}
+    ),
+    paged AS (
+      SELECT p.*, row_number() OVER (${order}) AS listing_rank
+      FROM filtered p
+      ${order}
+      LIMIT ${PAGE_SIZE} OFFSET ${offset}
+    ),
+    items AS (
+      ${productSelect(sql)}, p.listing_rank
+      FROM paged p
+      ${productJoins(sql)}
+    )
+    SELECT
+      (SELECT COUNT(*)::int FROM filtered) AS total,
+      COALESCE((SELECT jsonb_agg(to_jsonb(i) ORDER BY i.listing_rank) FROM items i), '[]'::jsonb) AS products,
+      COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('id', x.slug, 'label', x.name, 'labelKm', x.name_km, 'count', x.n) ORDER BY x.sort_order NULLS LAST, x.name)
+        FROM (
+          SELECT c.slug, c.name, c.name_km, c.sort_order, COUNT(*)::int AS n
+          FROM products p
+          JOIN categories c ON c.id = p.category_id
+          WHERE ${baseWhere} AND ${brandCond}
+          GROUP BY c.slug, c.name, c.name_km, c.sort_order
+        ) x
+      ), '[]'::jsonb) AS categories,
+      COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('id', y.brand, 'label', y.brand, 'labelKm', NULL, 'count', y.n) ORDER BY y.n DESC, y.brand)
+        FROM (
+          SELECT p.brand, COUNT(*)::int AS n
+          FROM products p
+          WHERE ${baseWhere} AND ${categoryCond} AND p.brand IS NOT NULL
+          GROUP BY p.brand
+        ) y
+      ), '[]'::jsonb) AS brands
   `;
 
+  const row = rows[0] ?? {};
+  const toFacets = (value: unknown): CatalogFacet[] =>
+    (Array.isArray(value) ? value : []).map((item) => ({
+      id: String(item.id),
+      label: String(item.label),
+      labelKm: item.labelKm ?? null,
+      count: Number(item.count ?? 0),
+    }));
+
+  return {
+    products: (Array.isArray(row.products) ? row.products : []).map(mapProductRow),
+    total: Number(row.total ?? 0),
+    page,
+    pageSize: PAGE_SIZE,
+    categories: toFacets(row.categories),
+    brands: toFacets(row.brands),
+  };
+}
+
+/** Kept for callers that only need a product page (e.g. related products). */
+export async function getProducts(filters: ProductFilters) {
+  const { products, total, page, pageSize } = await getCatalogListing(filters);
+  return { products, total, page, pageSize };
+}
+
+/** Non-empty categories with Khmer names, in shop order (header chips on product pages). */
+export async function getCategories(): Promise<ProductCategory[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT c.slug AS id, c.name AS label, c.name_km AS "labelKm", COUNT(p.id)::int AS count
+    FROM categories c
+    JOIN products p ON p.category_id = c.id AND p.is_active = true
+    GROUP BY c.slug, c.name, c.name_km, c.sort_order
+    ORDER BY c.sort_order NULLS LAST, c.name
+  `;
   return rows.map((row) => ({
     id: String(row.id),
+    label: String(row.label),
+    labelKm: row.labelKm ?? null,
+    count: Number(row.count ?? 0),
+  }));
+}
+
+/** Real brands (products.brand), most products first. */
+export async function getBrands(): Promise<Array<{ id: string; label: string; count: number }>> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT brand, COUNT(*)::int AS count
+    FROM products
+    WHERE is_active = true AND brand IS NOT NULL
+    GROUP BY brand
+    ORDER BY count DESC, brand
+  `;
+  return rows.map((row) => ({ id: String(row.brand), label: String(row.brand), count: Number(row.count) }));
+}
+
+/**
+ * Recommended products ("ផលិតផលណែនាំ"), ordered by products.featured_rank (1 = first).
+ * Reads the column through to_jsonb so it returns [] until migration 0017 has run.
+ */
+export async function getRecommendedProducts(limit = 8): Promise<Product[]> {
+  const sql = getSql();
+  const rows = await sql`
+    ${productSelect(sql)}, (to_jsonb(p) ->> 'featured_rank')::int AS "featuredRank"
+    FROM products p
+    ${productJoins(sql)}
+    WHERE p.is_active = true AND NULLIF(to_jsonb(p) ->> 'featured_rank', '') IS NOT NULL
+    ORDER BY (to_jsonb(p) ->> 'featured_rank')::int ASC, p.title ASC
+    LIMIT ${limit}
+  `;
+  return rows.map(mapProductRow);
+}
+
+/** Finds an active product by public slug or by legacy id (old URLs). */
+export async function getProductBySlugOrId(key: string): Promise<Product | null> {
+  const sql = getSql();
+  const rows = await sql`
+    ${productSelect(sql)}
+    FROM products p
+    ${productJoins(sql)}
+    WHERE (p.slug_public = ${key} OR p.id = ${key}) AND p.is_active = true
+    ORDER BY (p.slug_public = ${key}) DESC
+    LIMIT 1
+  `;
+  return rows[0] ? mapProductRow(rows[0]) : null;
+}
+
+export async function getProductById(id: string): Promise<Product | null> {
+  return getProductBySlugOrId(id);
+}
+
+/** Active product slugs with last-modified time, for app/sitemap.ts. */
+export async function getSitemapProducts(): Promise<Array<{ id: string; slug: string; updatedAt: Date | null }>> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT p.id, COALESCE(p.slug_public, p.id) AS slug, p.updated_at AS "updatedAt"
+    FROM products p
+    WHERE p.is_active = true AND p.id <> ''
+    ORDER BY p.sort_order ASC NULLS LAST, p.id ASC
+  `;
+  return rows.map((row) => ({
+    id: String(row.id),
+    slug: String(row.slug),
     updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
   }));
 }

@@ -1,116 +1,111 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { RotateCcw } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useLocale } from "@/components/locale/locale-provider";
-import { getUiText } from "@/lib/i18n";
+import type { FormEvent, MouseEvent } from "react";
+import Link from "next/link";
 
-function parsePriceInput(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return n;
-}
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 
-export function PriceRangeFilter() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const { locale } = useLocale();
-  const copy = getUiText(locale).catalog;
-  const pageCopy = getUiText(locale).catalogPage;
+/**
+ * Price filter as a plain GET form, so it still works before JavaScript loads.
+ * With JavaScript, Apply/clear navigate in a transition (progress bar + skeleton grid).
+ * Submitting keeps the other filters (hidden inputs) and resets to page 1.
+ */
+export function PriceRangeFilter({
+  min,
+  max,
+  preserved,
+  clearHref,
+  labels,
+}: {
+  min: number | null;
+  max: number | null;
+  preserved: Record<string, string | null>;
+  clearHref: string;
+  labels: { price: string; min: string; max: string; to: string; apply: string; clear: string };
+}) {
+  const router = useCatalogRouter();
+  const hasPriceFilter = min !== null || max !== null;
 
-  const minRef = useRef<HTMLInputElement | null>(null);
-  const maxRef = useRef<HTMLInputElement | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const minParam = searchParams.get("minPrice") ?? "";
-  const maxParam = searchParams.get("maxPrice") ?? "";
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  const hasPriceFilter = Boolean(minParam || maxParam);
-
-  function scheduleUpdate() {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(() => {
-      const minValue = parsePriceInput(minRef.current?.value ?? "");
-      const maxValue = parsePriceInput(maxRef.current?.value ?? "");
-
-      const params = new URLSearchParams(searchParams.toString());
-
-      if (minValue === null) params.delete("minPrice");
-      else params.set("minPrice", String(minValue));
-
-      if (maxValue === null) params.delete("maxPrice");
-      else params.set("maxPrice", String(maxValue));
-
-      params.delete("page");
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    }, 300);
-  }
-
-  function clearPriceRange() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("minPrice");
-    params.delete("maxPrice");
-    params.delete("page");
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    for (const [name, value] of new FormData(event.currentTarget)) {
+      if (typeof value === "string" && value.trim()) params.set(name, value.trim());
+    }
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.push(qs ? `/products?${qs}` : "/products", { scroll: false });
   }
+
+  function handleClear(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    router.push(clearHref, { scroll: false });
+  }
+  const inputClass =
+    "h-11 w-full min-w-0 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] outline-none placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-primary)] sm:w-[120px]";
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="text-xs font-medium uppercase tracking-wider text-[var(--app-text-muted)]">
-        {copy.price}
-      </div>
+    <form
+      action="/products"
+      method="get"
+      onSubmit={handleSubmit}
+      className="flex flex-wrap items-end gap-2"
+      aria-label={labels.price}
+    >
+      {Object.entries(preserved).map(([name, value]) =>
+        value ? <input key={name} type="hidden" name={name} value={value} /> : null,
+      )}
+
+      <label className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-none">
+        <span className="locale-label text-xs font-medium uppercase text-[var(--app-text-muted)]">
+          {labels.price} ({labels.min})
+        </span>
+        <input
+          type="number"
+          name="min"
+          min={0}
+          step="0.01"
+          inputMode="decimal"
+          defaultValue={min ?? ""}
+          placeholder="$0"
+          className={inputClass}
+        />
+      </label>
+      <span className="pb-3 text-sm text-[var(--app-text-faint)]" aria-hidden="true">
+        {labels.to}
+      </span>
+      <label className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-none">
+        <span className="locale-label text-xs font-medium uppercase text-[var(--app-text-muted)]">
+          {labels.price} ({labels.max})
+        </span>
+        <input
+          type="number"
+          name="max"
+          min={0}
+          step="0.01"
+          inputMode="decimal"
+          defaultValue={max ?? ""}
+          placeholder="$100"
+          className={inputClass}
+        />
+      </label>
 
       <div className="flex items-center gap-2">
-        <input
-          key={`min:${minParam}`}
-          ref={minRef}
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={minParam}
-          placeholder={copy.min}
-          onChange={scheduleUpdate}
-          className="h-11 w-[110px] rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-faint)] outline-none focus:border-[var(--app-primary)]"
-        />
-
-        <span className="text-sm text-[var(--app-text-faint)]">{copy.to}</span>
-
-        <input
-          key={`max:${maxParam}`}
-          ref={maxRef}
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={maxParam}
-          placeholder={copy.max}
-          onChange={scheduleUpdate}
-          className="h-11 w-[110px] rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-faint)] outline-none focus:border-[var(--app-primary)]"
-        />
-
+        <button
+          type="submit"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-[var(--app-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--app-primary-hover)]"
+        >
+          {labels.apply}
+        </button>
         {hasPriceFilter ? (
-          <button
-            type="button"
-            onClick={clearPriceRange}
-            className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:border-[var(--app-border-strong)] hover:text-[var(--app-text)]"
-            aria-label={pageCopy.clearPriceRange}
+          <Link
+            href={clearHref}
+            onClick={handleClear}
+            className="inline-flex h-11 items-center px-2 text-sm font-semibold text-[var(--app-primary)] underline-offset-2 hover:underline"
           >
-            <RotateCcw className="size-4" />
-          </button>
+            {labels.clear}
+          </Link>
         ) : null}
       </div>
-    </div>
+    </form>
   );
 }

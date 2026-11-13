@@ -10,7 +10,7 @@ import type { Product } from "@/types/product";
 function mapProductToInsert(product: Product): ProductInsert {
   return {
     id: product.id,
-    brand: product.brand ?? "ecobright",
+    brand: product.brand ?? null,
     title: product.title,
     titleKm: product.titleKm ?? null,
     category: product.category,
@@ -107,6 +107,15 @@ export async function getProductByLookupKey(lookupKey: string): Promise<Product 
   const directMatch = await getProductById(lookupKey);
   if (directMatch) {
     return directMatch;
+  }
+
+  // Public slugs (e.g. /products/led-strip-100m) from links shared after the Nov 2026 cleanup.
+  const db = getDb();
+  const slugRow = await db.query.productsTable.findFirst({
+    where: eq(productsTable.slugPublic, normalizedLookupKey),
+  });
+  if (slugRow) {
+    return mapProductRowToProduct(slugRow);
   }
 
   const products = await getActiveProducts();

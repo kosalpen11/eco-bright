@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 
 import type { ProductSortMode } from "@/lib/types";
 import { useLocale } from "@/components/locale/locale-provider";
@@ -20,7 +21,7 @@ function isSortMode(value: string): value is ProductSortMode {
 }
 
 export function SortSelect() {
-  const router = useRouter();
+  const router = useCatalogRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { locale } = useLocale();

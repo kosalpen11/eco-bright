@@ -17,6 +17,9 @@ export interface PublicProductVariant {
 
 export interface PublicProduct {
   id: string;
+  /** URL segment for /products/{slug}; falls back to id. */
+  slug: string;
+  brand: string | null;
   title: string;
   titleKm: string | null;
   name: string;
@@ -26,6 +29,8 @@ export interface PublicProduct {
   description: string;
   descriptionKm: string | null;
   price: number;
+  /** Highest active option price; equals price when there is no range. */
+  priceMax: number;
   oldPrice: number | null;
   badge: string | null;
   packQty: string | null;
@@ -128,8 +133,16 @@ export function mapProductToPublicProduct(product: Product): PublicProduct {
       ? publicVariants.some((variant) => variant.available)
       : product.inStock || (typeof product.stockQty === "number" ? product.stockQty > 0 : false);
 
+  const optionPrices = publicVariants
+    .map((variant) => variant.price)
+    .filter((value): value is number => typeof value === "number");
+  const displayPrice = getDisplayProductPrice(product, publicVariants);
+  const minPrice = optionPrices.length ? Math.min(...optionPrices) : displayPrice;
+
   return {
     id: product.id,
+    slug: product.slug || product.id,
+    brand: product.brand ?? null,
     title: product.title,
     titleKm: product.titleKm,
     name: product.name,
@@ -138,7 +151,8 @@ export function mapProductToPublicProduct(product: Product): PublicProduct {
     categoryLabelKm: product.categoryLabelKm,
     description: product.description,
     descriptionKm: product.descriptionKm,
-    price: getDisplayProductPrice(product, publicVariants),
+    price: minPrice,
+    priceMax: optionPrices.length ? Math.max(...optionPrices) : minPrice,
     oldPrice: product.oldPrice,
     badge: product.badge,
     packQty: product.packQty,

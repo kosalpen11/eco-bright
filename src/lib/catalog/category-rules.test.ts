@@ -18,9 +18,10 @@ test("normalizeCategory remaps legacy storefront categories", () => {
     category: "solar-systems",
     wasRemapped: true,
   });
+  // Shop category since the Nov 2026 cleanup: kept as-is, not remapped.
   assert.deepEqual(normalizeCategory("accessories"), {
-    category: "drivers-accessories",
-    wasRemapped: true,
+    category: "accessories",
+    wasRemapped: false,
   });
 });
 

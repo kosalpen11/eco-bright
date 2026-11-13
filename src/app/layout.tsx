@@ -6,12 +6,12 @@ import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/locale/locale-provider";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { SHOP_DESCRIPTION } from "@/lib/constants";
 import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
 import {
   DEFAULT_OG_IMAGE,
   SITE_ALTERNATE_LOCALE,
   SITE_LOCALE,
+  SITE_DESCRIPTION_KM,
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo";
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     default: `${SITE_NAME} | LED & Solar Cambodia`,
     template: `%s | ${SITE_NAME}`,
   },
-  description: SHOP_DESCRIPTION,
+  description: SITE_DESCRIPTION_KM,
   applicationName: SITE_NAME,
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
@@ -73,13 +73,13 @@ export const metadata: Metadata = {
     locale: SITE_LOCALE,
     alternateLocale: [SITE_ALTERNATE_LOCALE],
     title: `${SITE_NAME} | LED & Solar Cambodia`,
-    description: SHOP_DESCRIPTION,
+    description: SITE_DESCRIPTION_KM,
     images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: `${SITE_NAME} | LED & Solar Cambodia`,
-    description: SHOP_DESCRIPTION,
+    description: SITE_DESCRIPTION_KM,
     images: [DEFAULT_OG_IMAGE.url],
   },
 };

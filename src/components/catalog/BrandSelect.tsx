@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
 import { getUiText } from "@/lib/i18n";
 
@@ -17,7 +18,7 @@ export function BrandSelect({
   brands: BrandOption[];
   activeBrand: string | null;
 }) {
-  const router = useRouter();
+  const router = useCatalogRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { locale } = useLocale();
@@ -28,15 +29,11 @@ export function BrandSelect({
   function go(next: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("page");
-    params.delete("brand"); // legacy (if present)
+    if (!next || next === "all") params.delete("brand");
+    else params.set("brand", next);
 
     const qs = params.toString();
-    const targetPath =
-      !next || next === "all"
-        ? "/products"
-        : `/catalog/${encodeURIComponent(next)}`;
-
-    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
+    router.replace(qs ? `/products?${qs}` : "/products", { scroll: false });
   }
 
   // If this component ends up mounted on a different route, still behave predictably.
@@ -45,7 +42,7 @@ export function BrandSelect({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="text-xs font-medium uppercase tracking-wider text-[var(--app-text-muted)]">
+      <div className="locale-label text-xs font-medium uppercase text-[var(--app-text-muted)]">
         {copy.brand}
       </div>
       <select

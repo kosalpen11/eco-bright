@@ -14,7 +14,14 @@ import {
 
 export const productsTable = pgTable("products", {
   id: text("id").primaryKey(),
-  brand: text("brand").notNull().default("ecobright"),
+  // Real brand (Grace, Fuji, …) or null when unknown. See drizzle/0016_catalog_cleanup.sql.
+  brand: text("brand"),
+  /** Public URL slug; old /products/{id} URLs redirect here. */
+  slugPublic: text("slug_public").unique("products_slug_public_key"),
+  /** FK to categories.id (table owned by the admin app); `category` keeps the slug. */
+  categoryId: text("category_id"),
+  /** Recommended row order on /products (1 = first); null = not recommended. Migration 0017. */
+  featuredRank: integer("featured_rank"),
   title: text("title").notNull(),
   titleKm: text("title_km"),
   category: text("category").notNull(),
