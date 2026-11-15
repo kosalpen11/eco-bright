@@ -23,6 +23,7 @@ import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { SiteHeader, TelegramIcon } from "@/components/layout/site-header";
 import { useLocale } from "@/components/locale/locale-provider";
 import { buildCartLineId } from "@/lib/cart-storage";
+import { categoryPath } from "@/lib/catalog-url";
 import { productEventParams, track } from "@/lib/analytics";
 import { buildTelegramProfileUrl } from "@/lib/checkout";
 import { TELEGRAM_CHECKOUT_USERNAME } from "@/lib/constants";
@@ -269,7 +270,7 @@ export function ProductDetailClient({
           label={siteCopy.breadcrumb}
           items={[
             { label: siteCopy.home, href: "/products" },
-            { label: product.categoryLabel, href: `/products?category=${encodeURIComponent(product.category)}` },
+            { label: product.categoryLabel, href: categoryPath(product.category) },
             { label: displayName },
           ]}
         />

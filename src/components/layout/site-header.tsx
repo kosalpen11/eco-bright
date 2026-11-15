@@ -9,6 +9,7 @@ import { Search, ShieldCheck, ShoppingCart, Truck, X } from "lucide-react";
 import { CategoryBar } from "@/components/catalog/CategoryBar";
 import { SearchInput } from "@/components/catalog/SearchInput";
 import { useLocale } from "@/components/locale/locale-provider";
+import { isCatalogPath } from "@/lib/catalog-url";
 import { TELEGRAM_OWNER_URL } from "@/lib/constants";
 import { getUiText } from "@/lib/i18n";
 import type { ProductCategory } from "@/lib/types";
@@ -24,10 +25,6 @@ export function TelegramIcon({ className }: { className?: string }) {
 
 const iconButtonClass =
   "relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-white text-[var(--app-primary)] shadow-sm transition-colors hover:bg-[var(--app-surface)]";
-
-function isCatalogPath(pathname: string) {
-  return pathname === "/products" || pathname.startsWith("/catalog/");
-}
 
 function HeaderCartButton({ label }: { label: string }) {
   const count = useCartStore(selectCartCount);

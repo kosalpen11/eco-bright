@@ -6,6 +6,7 @@ import {
   getBrands,
   getCatalogListing,
   getCategories,
+  getFeedProducts,
   getProductBySlugOrId,
   getProducts,
   getRecommendedProducts,
@@ -29,3 +30,9 @@ export const getCachedProductBySlugOrId = unstable_cache(getProductBySlugOrId, [
 export const getCachedCategories = unstable_cache(getCategories, ["storefront-categories"], options);
 export const getCachedBrands = unstable_cache(getBrands, ["storefront-brands"], options);
 export const getCachedRecommendedProducts = unstable_cache(getRecommendedProducts, ["storefront-recommended"], options);
+
+/** Merchant feed + skipped report: refreshed hourly (or on revalidateTag(PRODUCTS_CACHE_TAG)). */
+export const getCachedFeedProducts = unstable_cache(getFeedProducts, ["merchant-feed-products"], {
+  revalidate: 3600,
+  tags: [PRODUCTS_CACHE_TAG],
+});

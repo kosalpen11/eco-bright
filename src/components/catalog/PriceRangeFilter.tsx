@@ -4,6 +4,7 @@ import type { FormEvent, MouseEvent } from "react";
 import Link from "next/link";
 
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
+import { buildCatalogHref } from "@/lib/catalog-url";
 
 /**
  * Price filter as a plain GET form, so it still works before JavaScript loads.
@@ -32,8 +33,7 @@ export function PriceRangeFilter({
     for (const [name, value] of new FormData(event.currentTarget)) {
       if (typeof value === "string" && value.trim()) params.set(name, value.trim());
     }
-    const qs = params.toString();
-    router.push(qs ? `/products?${qs}` : "/products", { scroll: false });
+    router.push(buildCatalogHref(params), { scroll: false });
   }
 
   function handleClear(event: MouseEvent<HTMLAnchorElement>) {

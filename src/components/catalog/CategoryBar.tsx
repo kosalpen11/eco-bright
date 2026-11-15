@@ -1,7 +1,10 @@
 "use client";
 
+import type { MouseEvent } from "react";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
+import { buildCatalogHref, getCatalogParams, isCatalogPath } from "@/lib/catalog-url";
 
 import type { ProductCategory } from "@/lib/types";
 
@@ -16,20 +19,22 @@ export function CategoryBar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  function setCategory(nextCategory: string) {
-    const params = new URLSearchParams(searchParams.toString());
+  const onCatalog = isCatalogPath(pathname);
 
-    if (!nextCategory || nextCategory === "all") {
-      params.delete("category");
-    } else {
-      params.set("category", nextCategory);
-    }
-
+  // Real links (/category/{slug}) so crawlers can follow them; other filters are kept on the catalog.
+  function hrefFor(nextCategory: string) {
+    const params = getCatalogParams(pathname, searchParams);
+    if (!nextCategory || nextCategory === "all") params.delete("category");
+    else params.set("category", nextCategory);
     params.delete("page");
-    const qs = params.toString();
-    const onCatalog = pathname === "/products" || pathname.startsWith("/catalog/");
-    const targetPath = onCatalog ? pathname : "/products";
-    const href = qs ? `${targetPath}?${qs}` : targetPath;
+    return buildCatalogHref(params);
+  }
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
     // Filter in place on the catalog; from other pages (e.g. a product) navigate normally.
     if (onCatalog) {
       router.replace(href, { scroll: false });
@@ -45,11 +50,15 @@ export function CategoryBar({
           (category.id === "all" && (!activeCategory || activeCategory === "all")) ||
           category.id === activeCategory;
 
+        const href = hrefFor(category.id);
+
         return (
-          <button
+          <Link
             key={category.id}
-            type="button"
-            onClick={() => setCategory(category.id)}
+            href={href}
+            prefetch={false}
+            onClick={(event) => handleClick(event, href)}
+            aria-current={isActive ? "page" : undefined}
             className={[
               "shrink-0 whitespace-nowrap rounded-full border px-4 py-3 text-sm font-medium transition-colors",
               isActive
@@ -65,7 +74,7 @@ export function CategoryBar({
             >
               {category.count}
             </span>
-          </button>
+          </Link>
         );
       })}
     </div>

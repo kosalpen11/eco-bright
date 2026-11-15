@@ -102,6 +102,19 @@ scripts/
   - copy/share actions
   - order submit button state
 
+## Storefront URLs And SEO
+- `/` 308 → `/products` (storefront home; carries Organization + WebSite JSON-LD).
+- `/category/{slug}` is the only indexable filtered listing. `?category=`, old category slugs,
+  `?minPrice=` and `/catalog/{brand}` 308 to the canonical shape. Filter controls build URLs with
+  `buildCatalogHref` (`src/lib/catalog-url.ts`).
+- Listing robots/canonical rules live in `src/lib/listing-metadata.ts`: plain first page indexable;
+  page 2+ noindex,follow with a self canonical; search/brand/price/sort noindex,follow with the
+  canonical on the unfiltered listing.
+- `src/lib/structured-data.ts` is the one source for product name, description, price and
+  availability used by page metadata, JSON-LD and `/feeds/google-merchant`, so they always match.
+- `/feeds/skipped` lists products left out of the feed (and data warnings); it needs `FEED_REPORT_TOKEN`.
+- `sitemap.xml` (hourly) lists `/products`, every non-empty category and every active product.
+
 ## Future Scale
 - Keep order-core and telegram-core reusable for a separate admin bot or future API gateway.
 - Keep product sourcing abstract so Google Sheets and Neon can coexist.

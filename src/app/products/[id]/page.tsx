@@ -1,32 +1,33 @@
 import type { Metadata } from "next";
-import { permanentRedirect } from "next/navigation";
-import { cache, Suspense } from "react";
+import { Suspense } from "react";
 
 import { ProductDetailClient } from "@/components/catalog/ProductDetailClient";
 import { RelatedProducts } from "@/components/catalog/product-detail/RelatedProducts";
-import {
-  getCachedCategories,
-  getCachedProductBySlugOrId,
-  getCachedProducts,
-} from "@/lib/db/cached-products";
+import { JsonLd } from "@/components/seo/json-ld";
+import { getCachedCategories, getCachedProducts } from "@/lib/db/cached-products";
 import { getUiText, localizeText } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/locale-server";
-import {
-  getActiveProducts,
-  getPublicProductOrNotFound,
-  mapProductToPublicProduct,
-} from "@/lib/public-products";
+import { getActiveProducts, mapProductToPublicProduct } from "@/lib/public-products";
 import {
   DEFAULT_OG_IMAGE,
-  PRODUCT_DESCRIPTION_FALLBACK_KM,
   SITE_ALTERNATE_LOCALE,
   SITE_LOCALE,
   SITE_NAME,
   SITE_URL,
   formatUsdForTitle,
-  toAbsoluteHttpsImageUrl,
   toMetaDescription,
 } from "@/lib/seo";
+import {
+  breadcrumbJsonLd,
+  buildProductDescription,
+  productBreadcrumbs,
+  productImageUrls,
+  productJsonLd,
+  productName,
+  productPath,
+} from "@/lib/structured-data";
+
+import { getPublicProduct } from "./product-loader";
 
 type Params = Promise<{ id: string }>;
 
@@ -75,16 +76,6 @@ function RelatedProductsFallback() {
   );
 }
 
-// `id` is the URL segment: the public slug, or a legacy product id from old links.
-// Dedupe the query between generateMetadata and the page within one request.
-const getPublicProduct = cache(async (key: string) =>
-  getPublicProductOrNotFound(await getCachedProductBySlugOrId(decodeURIComponent(key))),
-);
-
-function productPath(product: { slug: string }) {
-  return `/products/${encodeURIComponent(product.slug)}`;
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -93,15 +84,13 @@ export async function generateMetadata({
   const { id } = await params;
   const product = await getPublicProduct(id);
 
-  const title = `${product.name} - ${formatUsdForTitle(product.price)} | ${SITE_NAME}`;
-  const description = toMetaDescription(
-    product.description?.trim() || product.descriptionKm?.trim() || PRODUCT_DESCRIPTION_FALLBACK_KM,
-  );
+  // Same name/price/description as the JSON-LD and the Merchant feed (lib/structured-data).
+  const name = productName(product);
+  const title = `${name} - ${formatUsdForTitle(product.price)} | ${SITE_NAME}`;
+  const description = toMetaDescription(buildProductDescription(product));
   const canonical = productPath(product);
-  const productImage = toAbsoluteHttpsImageUrl(product.imageUrls[0] ?? product.imageUrl);
-  const ogImage = productImage
-    ? { url: productImage, alt: product.name }
-    : DEFAULT_OG_IMAGE;
+  const productImage = productImageUrls(product)[0];
+  const ogImage = productImage ? { url: productImage, alt: name } : DEFAULT_OG_IMAGE;
 
   return {
     // `absolute` skips the layout's "%s | ECOBright" template (already in the title).
@@ -132,11 +121,6 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
   const { id } = await params;
   const product = await getPublicProduct(id);
 
-  // Old links (/products/Grace_LED-Bulb) keep working: 308 to the public slug.
-  if (decodeURIComponent(id) !== product.slug) {
-    permanentRedirect(productPath(product));
-  }
-
   const [categories, locale] = await Promise.all([
     getCachedCategories().catch(() => []),
     getRequestLocale(),
@@ -156,6 +140,8 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
   const categoryChips = [{ id: "all", label: "All", count: allCount }, ...categories];
 
   return (
+    <>
+    <JsonLd data={[productJsonLd(product), breadcrumbJsonLd(productBreadcrumbs(product))]} />
     <ProductDetailClient
       product={localizedProduct}
       categories={categoryChips}
@@ -166,5 +152,6 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
         </Suspense>
       }
     />
+    </>
   );
 }

@@ -49,6 +49,14 @@ ECO BRIGHT LED & SOLAR
 - [x] Telegram main menu, search, cart, and order lookup flow
 - [ ] Printable invoice mode
 
+## SEO (Nov 2026)
+- [x] Product, category and listing metadata with canonical + noindex rules
+- [x] JSON-LD: Product (Offer / AggregateOffer), BreadcrumbList, ItemList, Organization, WebSite
+- [x] `/category/{slug}` pages, crawlable category chips and pagination links, footer category links
+- [x] Sitemap with categories, robots rules, Google Merchant feed + protected skipped report
+- [ ] Fill brand for 11 products and write real descriptions (most are ~20 characters)
+- [ ] Search Console + Merchant Center setup (manual)
+
 ## Current Focus
 - [x] Keep docs and memory aligned with the live flow
 - [x] Keep the separate customer, sales, and admin bot runtimes aligned

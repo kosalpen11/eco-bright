@@ -6,9 +6,11 @@ import { Clock, MapPin, Phone, Truck } from "lucide-react";
 
 import { TelegramIcon } from "@/components/layout/site-header";
 import { useLocale } from "@/components/locale/locale-provider";
+import { categoryPath } from "@/lib/catalog-url";
 import { TELEGRAM_OWNER_URL } from "@/lib/constants";
 import { getUiText } from "@/lib/i18n";
 import { STORE_INFO, toTelHref } from "@/lib/store-info";
+import type { ProductCategory } from "@/lib/types";
 
 const headingClass =
   // `locale-label` swaps the wide Latin letter-spacing for a Khmer-safe one.
@@ -18,7 +20,7 @@ const linkClass =
 const rowClass = "flex items-start gap-2 text-sm text-[var(--app-text-soft)]";
 const iconClass = "mt-0.5 size-4 shrink-0 text-[var(--app-primary)]";
 
-export function Footer() {
+export function Footer({ categories = [] }: { categories?: ProductCategory[] }) {
   const { locale } = useLocale();
   const copy = getUiText(locale).site.footer;
   const address = STORE_INFO.address[locale];
@@ -102,6 +104,13 @@ export function Footer() {
                 {copy.products}
               </Link>
             </li>
+            {categories.map((category) => (
+              <li key={category.id}>
+                <Link href={categoryPath(category.id)} className={linkClass}>
+                  {(locale === "km" && category.labelKm?.trim()) || category.label}
+                </Link>
+              </li>
+            ))}
             {returnPolicyHref ? (
               <li>
                 <Link href={returnPolicyHref} className={linkClass}>

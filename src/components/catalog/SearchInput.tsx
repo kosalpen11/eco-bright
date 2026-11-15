@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
+import { buildCatalogHref, getCatalogParams } from "@/lib/catalog-url";
 import { getUiText } from "@/lib/i18n";
 
 export function SearchInput() {
@@ -24,7 +25,7 @@ export function SearchInput() {
   }, []);
 
   function updateQuery(nextValue: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = getCatalogParams(pathname, searchParams);
     const next = nextValue.trim();
 
     if (!next) {
@@ -34,10 +35,7 @@ export function SearchInput() {
     }
 
     params.delete("page");
-    const qs = params.toString();
-    const targetPath =
-      pathname === "/products" || pathname.startsWith("/catalog/") ? pathname : "/products";
-    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
+    router.replace(buildCatalogHref(params), { scroll: false });
   }
 
   function scheduleUpdate(nextValue: string) {

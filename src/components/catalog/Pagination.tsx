@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
+import { buildCatalogHref, getCatalogParams } from "@/lib/catalog-url";
 import { getUiText } from "@/lib/i18n";
 
 function buildPageItems(page: number, totalPages: number): Array<number | "..."> {
@@ -55,18 +57,37 @@ export function Pagination({
 
   if (totalPages <= 1) return null;
 
-  function goToPage(next: number) {
+  // Real links (crawlable page 2+); with JavaScript they navigate in a transition.
+  function hrefFor(next: number) {
     const target = Math.min(totalPages, Math.max(1, next));
-    const params = new URLSearchParams(searchParams.toString());
+    const params = getCatalogParams(pathname, searchParams);
+    if (target <= 1) params.delete("page");
+    else params.set("page", String(target));
+    return buildCatalogHref(params);
+  }
 
-    if (target <= 1) {
-      params.delete("page");
-    } else {
-      params.set("page", String(target));
+  function handleClick(event: MouseEvent<HTMLAnchorElement>, next: number) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    router.push(hrefFor(next), { scroll: false, scrollToResults: true });
+  }
+
+  const navButtonClass =
+    "inline-flex h-11 items-center rounded-full border border-[var(--app-border)] bg-white px-4 text-sm font-medium text-[var(--app-text-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-[var(--app-border-strong)]";
+
+  function renderNavLink(target: number, disabled: boolean, label: string, rel: "prev" | "next") {
+    if (disabled) {
+      return (
+        <button type="button" disabled className={navButtonClass}>
+          {label}
+        </button>
+      );
     }
-
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false, scrollToResults: true });
+    return (
+      <Link href={hrefFor(target)} rel={rel} prefetch={false} onClick={(event) => handleClick(event, target)} className={navButtonClass}>
+        {label}
+      </Link>
+    );
   }
 
   return (
@@ -85,14 +106,7 @@ export function Pagination({
         </div>
 
         <div className="flex items-center justify-center gap-2 sm:justify-end">
-          <button
-            type="button"
-            onClick={() => goToPage(page - 1)}
-            disabled={page <= 1}
-            className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm font-medium text-[var(--app-text-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-[var(--app-border-strong)]"
-          >
-            {copy.prev}
-          </button>
+          {renderNavLink(page - 1, page <= 1, copy.prev, "prev")}
 
           <div className="hidden items-center gap-1 sm:flex">
             {items.map((item, idx) => {
@@ -106,20 +120,21 @@ export function Pagination({
 
               const isActive = item === page;
               return (
-                <button
+                <Link
                   key={item}
-                  type="button"
-                  onClick={() => goToPage(item)}
+                  href={hrefFor(item)}
+                  prefetch={false}
+                  onClick={(event) => handleClick(event, item)}
                   aria-current={isActive ? "page" : undefined}
                   className={[
-                    "h-11 min-w-[44px] rounded-full px-3 text-sm font-medium transition-colors",
+                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-full px-3 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-[var(--app-primary)] text-white"
                       : "border border-[var(--app-border)] bg-white text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)]",
                   ].join(" ")}
                 >
                   {item}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -128,14 +143,7 @@ export function Pagination({
             {page} / {totalPages}
           </div>
 
-          <button
-            type="button"
-            onClick={() => goToPage(page + 1)}
-            disabled={page >= totalPages}
-            className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm font-medium text-[var(--app-text-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-[var(--app-border-strong)]"
-          >
-            {copy.next}
-          </button>
+          {renderNavLink(page + 1, page >= totalPages, copy.next, "next")}
         </div>
       </div>
     </nav>

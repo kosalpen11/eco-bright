@@ -1,5 +1,7 @@
 /** Shared constants and helpers for link-preview (Open Graph / Twitter) metadata. */
 
+import { STORE_INFO } from "@/lib/store-info";
+
 export const SITE_URL = "https://ecobright.store";
 export const SITE_NAME = "ECOBright";
 export const SITE_LOCALE = "km_KH";
@@ -19,11 +21,43 @@ export const SITE_DESCRIPTION_KM =
 export const CATALOG_DESCRIPTION_KM =
   "ទំនិញទាំងអស់របស់ ECOBright៖ អំពូល LED កង្ហារប្រើថ្ម ខ្សែភ្លើង ផលិតផលសូឡា និងគ្រឿងបន្លាស់ ម៉ាក Grace, Fuji, Fixer និង One។ ច្រោះតាមប្រភេទ ម៉ាក និងតម្លៃ ហើយបញ្ជាទិញតាម Telegram។ ដឹកជញ្ជូនទូទាំងប្រទេសកម្ពុជា។";
 
-export const PRODUCT_DESCRIPTION_FALLBACK_KM =
-  "ផលិតផល LED និងសូឡាគុណភាពខ្ពស់ពី ECOBright។ កុម្ម៉ង់ឥឡូវនេះតាម Telegram។";
+/** Delivery line used in fallback descriptions; follows the footer copy (store-info.ts). */
+export const DELIVERY_LINE_KM = STORE_INFO.deliveryArea.km;
+
+export const SITE_LOGO_PATH = "/ecobright-logo.jpeg";
+export const SITE_ALTERNATE_NAME = "ECO BRIGHT LED & SOLAR";
+
+/** Hand-written intros for /category/{slug}; unknown categories fall back to a built sentence. */
+const CATEGORY_DESCRIPTIONS_KM: Record<string, string> = {
+  lights:
+    "អំពូល LED គ្រប់ប្រភេទ៖ អំពូលពិដាន អំពូលបង្កប់ អំពូលហ្វ្លាដ អំពូលខ្សែ អំពូលបំភ្លឺឃ្លាំង និងអំពូលការពារទឹក ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។",
+  solar:
+    "អំពូលសូឡា និងផលិតផលថាមពលព្រះអាទិត្យ សម្រាប់ផ្ទះ ផ្លូវ និងទីធ្លា ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។",
+  cables: "ខ្សែភ្លើង និងខ្សែតភ្ជាប់អគ្គិសនី ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។",
+  fans: "កង្ហារប្រើថ្ម សម្រាប់ផ្ទះ ហាង និងពេលដាច់ភ្លើង ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។",
+  accessories:
+    "គ្រឿងបន្លាស់ និងឧបករណ៍ភ្ជាប់សម្រាប់អំពូល LED និងអំពូលខ្សែ ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។",
+};
+
+export function getCategoryTitle(category: { label: string; labelKm?: string | null }) {
+  const km = category.labelKm?.trim();
+  return km && km !== category.label ? `${km} (${category.label})` : category.label;
+}
+
+export function getCategoryDescription(category: { id: string; label: string; labelKm?: string | null }) {
+  const intro =
+    CATEGORY_DESCRIPTIONS_KM[category.id] ??
+    `${category.labelKm?.trim() || category.label} ពី ECOBright។ មើលតម្លៃ និងបញ្ជាទិញតាម Telegram។`;
+  return `${intro} ${DELIVERY_LINE_KM}។`;
+}
+
+/** Absolute URL on the canonical origin. */
+export function absoluteUrl(path: string) {
+  return new URL(path, SITE_URL).toString();
+}
 
 // Product records fall back to this when they have no image of their own.
-const PRODUCT_PLACEHOLDER_IMAGE = "/ecobright-logo.jpeg";
+const PRODUCT_PLACEHOLDER_IMAGE = SITE_LOGO_PATH;
 
 /**
  * Returns an absolute https URL for a product image, or null when the product
