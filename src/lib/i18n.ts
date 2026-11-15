@@ -534,7 +534,7 @@ export const uiText = {
       breadcrumb: "Breadcrumb",
       categories: "Product categories",
       trust: {
-        delivery: "Delivery in Phnom Penh",
+        delivery: "Delivery across Cambodia",
         warranty: "Product warranty",
         support: "Support on Telegram",
       },
@@ -947,7 +947,7 @@ export const uiText = {
       breadcrumb: "ទីតាំងទំព័រ",
       categories: "ប្រភេទផលិតផល",
       trust: {
-        delivery: "ដឹកជញ្ជូនក្នុងភ្នំពេញ",
+        delivery: "ដឹកជញ្ជូនទូទាំងកម្ពុជា",
         warranty: "មានការធានាលើផលិតផល",
         support: "ជំនួយតាម Telegram",
       },
