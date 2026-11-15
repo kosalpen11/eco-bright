@@ -1,4 +1,4 @@
-import type { Bot } from "grammy";
+import type { Bot, Context } from "grammy";
 import { getCatalogCategories } from "../../../../packages/catalog-core/src";
 import { getSharedRuntimeConfig } from "../../../../packages/config/src";
 import { getLatestResumableOrderForTelegramUser } from "../../../../src/db/queries/orders";
@@ -101,7 +101,7 @@ export function registerStartHandler(bot: Bot, sessionService: TelegramSessionSe
     telegramUserId: string,
     username: string | null,
     selectedLang: BotLang,
-    ctx: any,
+    ctx: Context,
   ) {
     const config = getSharedRuntimeConfig();
     const existingSession = await sessionService.getState(telegramUserId);
@@ -215,7 +215,7 @@ export function registerStartHandler(bot: Bot, sessionService: TelegramSessionSe
 
 // ─── Shared start context handler ───────────────────────────────────────────
 async function handleStartWithContext(input: {
-  ctx: any;
+  ctx: Context;
   telegramUserId: string;
   username: string | null;
   payload?: string | null;

@@ -17,6 +17,6 @@ export function buildStartPayload(payload: TelegramStartPayload): string {
     case "order":
       return `v1.o.${compactToken(payload.shortOrderId)}`;
     default:
-      throw new Error(`Unknown payload type: ${(payload as any).type}`);
+      throw new Error(`Unknown payload type: ${(payload as { type?: unknown }).type}`);
   }
 }
