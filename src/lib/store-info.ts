@@ -7,7 +7,7 @@ export const STORE_INFO = {
   /** Display format, e.g. "+855 12 345 678". Rendered as a tel: link. */
   phone: "",
   address: { en: "", km: "" },
-  deliveryArea: { en: "Delivery within Phnom Penh only", km: "ដឹកជញ្ជូនតែក្នុងរាជធានីភ្នំពេញប៉ុណ្ណោះ" },
+  deliveryArea: { en: "Delivery anywhere in Cambodia", km: "ដឹកជញ្ជូនទូទាំងប្រទេសកម្ពុជា" },
   /** e.g. { en: "Mon–Sat, 8:00–17:30", km: "ច័ន្ទ–សៅរ៍ ម៉ោង ៨:០០–១៧:៣០" } */
   hours: { en: "", km: "" },
   /** Page or external URL for the return policy, e.g. "/returns". */
