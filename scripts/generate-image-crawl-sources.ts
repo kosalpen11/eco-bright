@@ -43,7 +43,7 @@ function loadProducts(filePath: string): ProductRow[] {
 function buildSources(products: ProductRow[], template: string): SourceRow[] {
   const out: SourceRow[] = [];
   for (const p of products) {
-    const id = String((p as any)?.id ?? "").trim();
+    const id = String((p as Partial<ProductRow> | null)?.id ?? "").trim();
     if (!id) continue;
     out.push({ id, url: template.replaceAll("{id}", encodeURIComponent(id)) });
   }

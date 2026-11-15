@@ -148,8 +148,8 @@ async function fetchWithRetry(
     try {
       // Node 20+ supports AbortSignal.timeout; keep a fallback for runtimes that don't.
       const signal =
-        typeof (AbortSignal as any)?.timeout === "function"
-          ? (AbortSignal as any).timeout(opts.timeoutMs)
+        typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(opts.timeoutMs)
           : (() => {
               const controller = new AbortController();
               setTimeout(() => controller.abort(), opts.timeoutMs).unref?.();
