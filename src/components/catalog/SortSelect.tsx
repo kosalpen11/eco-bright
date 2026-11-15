@@ -5,6 +5,7 @@ import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 
 import type { ProductSortMode } from "@/lib/types";
 import { useLocale } from "@/components/locale/locale-provider";
+import { buildCatalogHref, getCatalogParams } from "@/lib/catalog-url";
 import { getUiText } from "@/lib/i18n";
 
 function getOptions(copy: ReturnType<typeof getUiText>["catalog"]) {
@@ -32,7 +33,7 @@ export function SortSelect() {
   const value: ProductSortMode = current && isSortMode(current) ? current : "default";
 
   function setSort(next: ProductSortMode) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = getCatalogParams(pathname, searchParams);
 
     if (next === "default") {
       params.delete("sort");
@@ -41,8 +42,7 @@ export function SortSelect() {
     }
 
     params.delete("page");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.replace(buildCatalogHref(params), { scroll: false });
   }
 
   return (

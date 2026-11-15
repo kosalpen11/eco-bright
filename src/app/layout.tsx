@@ -4,6 +4,7 @@ import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 import { CartHydrator } from "@/components/cart/cart-hydrator";
 import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/locale/locale-provider";
+import { getCachedCategories } from "@/lib/db/cached-products";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
@@ -89,7 +90,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
+  const [cookieStore, categories] = await Promise.all([
+    cookies(),
+    // Footer category links; a DB hiccup must never break the page shell.
+    getCachedCategories().catch(() => []),
+  ]);
   const cookieLocale = cookieStore.get(LOCALE_COOKIE_KEY)?.value;
   const locale = resolveLocale(cookieLocale ?? DEFAULT_LOCALE);
 
@@ -107,7 +112,7 @@ export default async function RootLayout({
           <LocaleProvider>
             <CartHydrator />
             {children}
-            <Footer />
+            <Footer categories={categories} />
             <AnalyticsScripts />
           </LocaleProvider>
         </ThemeProvider>

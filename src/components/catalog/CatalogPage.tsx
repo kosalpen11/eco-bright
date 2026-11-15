@@ -16,51 +16,24 @@ import { SearchInput } from "@/components/catalog/SearchInput";
 import { SortSelect } from "@/components/catalog/SortSelect";
 import { ProductGridSkeleton } from "@/components/common/page-skeletons";
 import { SiteHeader } from "@/components/layout/site-header";
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildCatalogHref } from "@/lib/catalog-url";
+import { parseCatalogSearchParams, type CatalogSearchParams } from "@/lib/catalog-params";
 import { getCachedCatalogListing, getCachedRecommendedProducts } from "@/lib/db/cached-products";
 import { getUiText, localizeText } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/locale-server";
 import { getActiveProducts, mapProductToPublicProduct } from "@/lib/public-products";
+import { getCategoryTitle } from "@/lib/seo";
+import {
+  HOME_BREADCRUMB_KM,
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+} from "@/lib/structured-data";
 import type { ProductFilters, ProductSortMode } from "@/lib/types";
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
-const SORT_MODES = ["default", "price-asc", "price-desc", "name-asc"] as const satisfies ReadonlyArray<ProductSortMode>;
-
-/** Category slugs before the Nov 2026 cleanup → current slugs (old links keep working). */
-const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
-  "lighting-accessary": "lights",
-  fan: "fans",
-  "cable-accessory": "cables",
-  "solar-lighting": "solar",
-};
-
-function firstValue(value: string | string[] | undefined): string | null {
-  if (!value) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
-function parsePositiveNumber(value: string | null): number | null {
-  if (!value?.trim()) return null;
-  const n = Number(value);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return n;
-}
-
-function parseSort(value: string | null): ProductSortMode | null {
-  if (!value) return null;
-  return (SORT_MODES as readonly string[]).includes(value) ? (value as ProductSortMode) : null;
-}
-
-/** Canonical listing URL: /products?category=&brand=&q=&min=&max=&sort=&page= */
-function buildListingHref(params: Record<string, string | number | null | undefined>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === null || value === undefined || value === "") continue;
-    search.set(key, String(value));
-  }
-  const qs = search.toString();
-  return qs ? `/products?${qs}` : "/products";
-}
+const buildListingHref = buildCatalogHref;
 
 type CatalogCopy = ReturnType<typeof getUiText>["catalogPage"];
 
@@ -83,40 +56,22 @@ function buildBrowseTitle(
 export async function CatalogPage({
   searchParams,
   brand: legacyBrandRoute,
+  category: routeCategory,
 }: {
-  searchParams: SearchParams;
+  searchParams: CatalogSearchParams;
   /** Set by the legacy /catalog/[brand] route, which redirects to ?brand=. */
   brand?: string | null;
+  /** Set by /category/[slug]; the category comes from the path, never from ?category=. */
+  category?: string | null;
 }) {
   const [locale, sp] = await Promise.all([getRequestLocale(), searchParams]);
 
-  const rawCategory = (firstValue(sp.category) ?? "").trim();
-  const category = rawCategory && rawCategory !== "all" ? rawCategory : null;
-  const brand = (firstValue(sp.brand) ?? legacyBrandRoute ?? "").trim() || null;
-  const q = (firstValue(sp.q) ?? "").trim() || null;
-  const sort = parseSort(firstValue(sp.sort)) ?? "default";
-  const pageRaw = Number(firstValue(sp.page));
-  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
-  const minPrice = parsePositiveNumber(firstValue(sp.min) ?? firstValue(sp.minPrice));
-  const maxPrice = parsePositiveNumber(firstValue(sp.max) ?? firstValue(sp.maxPrice));
+  const parsed = parseCatalogSearchParams(sp, { routeCategory, legacyBrand: legacyBrandRoute });
+  const { category, brand, q, sort, page, minPrice, maxPrice, canonicalParams } = parsed;
 
-  const canonicalParams = {
-    q,
-    category: category ? (LEGACY_CATEGORY_SLUGS[category] ?? category) : null,
-    brand,
-    min: minPrice,
-    max: maxPrice,
-    sort: sort === "default" ? null : sort,
-    page: page > 1 ? page : null,
-  };
-
-  // Old URL shapes (/catalog/grace, ?minPrice=, old category slugs) → one canonical URL.
-  const usesLegacyShape =
-    Boolean(legacyBrandRoute) ||
-    sp.minPrice !== undefined ||
-    sp.maxPrice !== undefined ||
-    (category !== null && category in LEGACY_CATEGORY_SLUGS);
-  if (usesLegacyShape) {
+  // Old URL shapes (/catalog/grace, ?minPrice=, ?category=, old category slugs) → one canonical URL:
+  // /category/{slug}?… for a category, /products?… otherwise.
+  if (parsed.needsRedirect) {
     permanentRedirect(buildListingHref(canonicalParams));
   }
 
@@ -157,8 +112,25 @@ export async function CatalogPage({
   ].filter((label): label is string => Boolean(label));
   const hasActiveFilters = activeFilterChips.length > 0;
 
+  // Structured data: ItemList for the visible products (and the recommended row on the home page),
+  // Organization + WebSite on the plain home page, BreadcrumbList on category pages.
+  const listName = activeCategory ? getCategoryTitle(activeCategory) : hero.title;
+  const recommendedPublic = getActiveProducts(recommended).map(mapProductToPublicProduct);
+  const structuredData: Array<Record<string, unknown>> = [];
+  if (isUnfiltered) structuredData.push(organizationJsonLd(), websiteJsonLd());
+  if (category && activeCategory) {
+    structuredData.push(
+      breadcrumbJsonLd([HOME_BREADCRUMB_KM, { name: getCategoryTitle(activeCategory), path: buildListingHref({ category }) }]),
+    );
+  }
+  if (publicProducts.length) {
+    structuredData.push(itemListJsonLd(listName, publicProducts, (listing.page - 1) * listing.pageSize + 1));
+  }
+  if (recommendedPublic.length) structuredData.push(itemListJsonLd(ui.productPage.recommended, recommendedPublic));
+
   return (
     <CatalogNavigationProvider>
+    {structuredData.length ? <JsonLd data={structuredData} /> : null}
     <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
       {/* The filter card below has the search box, so the header doesn't repeat it here. */}
       <SiteHeader categories={categoryChips} activeCategory={category ?? "all"} showSearch={false} />
@@ -244,7 +216,7 @@ export async function CatalogPage({
           </section>
 
           <RecommendedProducts
-            products={getActiveProducts(recommended).map(mapProductToPublicProduct)}
+            products={recommendedPublic}
             locale={locale}
             title={ui.productPage.recommended}
           />

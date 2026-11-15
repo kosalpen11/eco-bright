@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 import { useLocale } from "@/components/locale/locale-provider";
+import { buildCatalogHref, getCatalogParams, isCatalogPath } from "@/lib/catalog-url";
 import { getUiText } from "@/lib/i18n";
 
 export interface BrandOption {
@@ -27,17 +28,16 @@ export function BrandSelect({
   const value = activeBrand ?? "all";
 
   function go(next: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = getCatalogParams(pathname, searchParams);
     params.delete("page");
     if (!next || next === "all") params.delete("brand");
     else params.set("brand", next);
 
-    const qs = params.toString();
-    router.replace(qs ? `/products?${qs}` : "/products", { scroll: false });
+    router.replace(buildCatalogHref(params), { scroll: false });
   }
 
   // If this component ends up mounted on a different route, still behave predictably.
-  const shouldShow = pathname === "/products" || pathname.startsWith("/catalog/");
+  const shouldShow = isCatalogPath(pathname);
   if (!shouldShow) return null;
 
   return (

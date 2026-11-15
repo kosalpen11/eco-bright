@@ -4,8 +4,24 @@
     {
       "name": "web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "-p", "3123"],
+      "runtimeArgs": [
+        "next",
+        "dev",
+        "-p",
+        "3123"
+      ],
       "port": 3123
+    },
+    {
+      "name": "web-prod",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "start",
+        "-p",
+        "3130"
+      ],
+      "port": 3130
     }
   ]
 }

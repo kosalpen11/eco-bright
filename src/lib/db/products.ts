@@ -562,11 +562,13 @@ export async function getProductById(id: string): Promise<Product | null> {
   return getProductBySlugOrId(id);
 }
 
-/** Active product slugs with last-modified time, for app/sitemap.ts. */
-export async function getSitemapProducts(): Promise<Array<{ id: string; slug: string; updatedAt: Date | null }>> {
+/** Active product slugs + category with last-modified time, for app/sitemap.ts (one query). */
+export async function getSitemapProducts(): Promise<
+  Array<{ id: string; slug: string; category: string; updatedAt: Date | null }>
+> {
   const sql = getSql();
   const rows = await sql`
-    SELECT p.id, COALESCE(p.slug_public, p.id) AS slug, p.updated_at AS "updatedAt"
+    SELECT p.id, COALESCE(p.slug_public, p.id) AS slug, p.category, p.updated_at AS "updatedAt"
     FROM products p
     WHERE p.is_active = true AND p.id <> ''
     ORDER BY p.sort_order ASC NULLS LAST, p.id ASC
@@ -574,6 +576,58 @@ export async function getSitemapProducts(): Promise<Array<{ id: string; slug: st
   return rows.map((row) => ({
     id: String(row.id),
     slug: String(row.slug),
+    category: String(row.category ?? ""),
     updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
   }));
+}
+
+/**
+ * Active products for the Google Merchant feed: only the columns the feed needs, plus a lean
+ * variants array (price/stock/image). Rows go through the same mapProductRow →
+ * mapProductToPublicProduct path as the product page, so price and availability match it.
+ */
+export async function getFeedProducts(): Promise<Product[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      p.id,
+      p.slug_public AS "slug",
+      p.brand,
+      p.title,
+      COALESCE(to_jsonb(p) ->> 'name', p.title) AS name,
+      p.category,
+      COALESCE(c.name, p.category_label) AS "categoryLabel",
+      COALESCE(c.name_km, p.category_label_km) AS "categoryLabelKm",
+      p.description,
+      p.description_km AS "descriptionKm",
+      p.price,
+      p.image_url AS "imageUrl",
+      COALESCE(p.image_urls, ARRAY[]::text[]) AS "imageUrls",
+      p.currency,
+      p.stock_qty AS "stockQty",
+      p.in_stock AS "inStock",
+      p.is_active AS "isActive",
+      COALESCE(v.variants, '[]'::jsonb) AS variants
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', pv.id,
+          'label', COALESCE(NULLIF(pv.title, ''), NULLIF(pv.sku, ''), pv.id),
+          'price', pv.price,
+          'stock_qty', pv.stock_qty,
+          'in_stock', CASE WHEN pv.stock_qty > 0 THEN true ELSE false END,
+          'image_url', pv.image_url,
+          'is_active', pv.is_active
+        )
+        ORDER BY pv.sort_order ASC, pv.title ASC, pv.id ASC
+      ) AS variants
+      FROM product_variants pv
+      WHERE pv.product_id = p.id
+    ) v ON true
+    WHERE p.is_active = true AND p.id <> ''
+    ORDER BY p.sort_order ASC NULLS LAST, p.id ASC
+  `;
+  return rows.map(mapProductRow);
 }
