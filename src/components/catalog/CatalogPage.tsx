@@ -8,6 +8,7 @@ import {
   CatalogNavigationProvider,
   CatalogResults,
 } from "@/components/catalog/catalog-navigation";
+import { MobileFilterPanel } from "@/components/catalog/MobileFilterPanel";
 import { Pagination } from "@/components/catalog/Pagination";
 import { PriceRangeFilter } from "@/components/catalog/PriceRangeFilter";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
@@ -111,6 +112,10 @@ export async function CatalogPage({
     sort !== "default" ? `${copy.sort}: ${sortLabels[sort]}` : null,
   ].filter((label): label is string => Boolean(label));
   const hasActiveFilters = activeFilterChips.length > 0;
+  // Filters inside the mobile panel (search stays visible outside it).
+  const activeFilterCount = [brand, minPrice, maxPrice, sort !== "default" ? sort : null].filter(
+    (value) => value !== null && value !== undefined && value !== "",
+  ).length;
 
   // Structured data: ItemList for the visible products (and the recommended row on the home page),
   // Organization + WebSite on the plain home page, BreadcrumbList on category pages.
@@ -182,36 +187,41 @@ export async function CatalogPage({
                   </div>
                   <SearchInput />
                 </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <BrandSelect brands={listing.brands} activeBrand={brandLabel ?? null} />
-                  <div className="min-w-0">
-                    <div className="locale-label mb-2 text-xs font-medium uppercase text-[var(--app-text-muted)]">
-                      {copy.sort}
+                {/* Phones: brand, sort and price fold behind one "Filters" button; desktop is unchanged. */}
+                <MobileFilterPanel activeCount={activeFilterCount} labels={{ show: copy.showFilters, hide: copy.hideFilters }}>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <BrandSelect brands={listing.brands} activeBrand={brandLabel ?? null} />
+                    <div className="min-w-0">
+                      <div className="locale-label mb-2 text-xs font-medium uppercase text-[var(--app-text-muted)]">
+                        {copy.sort}
+                      </div>
+                      <SortSelect />
                     </div>
-                    <SortSelect />
                   </div>
-                </div>
-              </div>
 
-              <PriceRangeFilter
-                min={minPrice}
-                max={maxPrice}
-                preserved={{
-                  q,
-                  category: canonicalParams.category,
-                  brand,
-                  sort: canonicalParams.sort,
-                }}
-                clearHref={buildListingHref({ ...canonicalParams, min: null, max: null, page: null })}
-                labels={{
-                  price: ui.catalog.price,
-                  min: ui.catalog.min,
-                  max: ui.catalog.max,
-                  to: ui.catalog.to,
-                  apply: copy.apply,
-                  clear: copy.clearPriceRange,
-                }}
-              />
+                  <div className="xl:col-span-2">
+                    <PriceRangeFilter
+                      min={minPrice}
+                      max={maxPrice}
+                      preserved={{
+                        q,
+                        category: canonicalParams.category,
+                        brand,
+                        sort: canonicalParams.sort,
+                      }}
+                      clearHref={buildListingHref({ ...canonicalParams, min: null, max: null, page: null })}
+                      labels={{
+                        price: ui.catalog.price,
+                        min: ui.catalog.min,
+                        max: ui.catalog.max,
+                        to: ui.catalog.to,
+                        apply: copy.apply,
+                        clear: copy.clearPriceRange,
+                      }}
+                    />
+                  </div>
+                </MobileFilterPanel>
+              </div>
             </div>
           </section>
 

@@ -3,11 +3,13 @@ import { cookies } from "next/headers";
 import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 import { CartHydrator } from "@/components/cart/cart-hydrator";
 import { Footer } from "@/components/layout/footer";
+import { HolidayBanner, SeasonParticles } from "@/components/layout/holiday-decor";
 import { LocaleProvider } from "@/components/locale/locale-provider";
 import { getCachedCategories } from "@/lib/db/cached-products";
 import { Bebas_Neue, Noto_Sans_Khmer, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { DEFAULT_LOCALE, LOCALE_COOKIE_KEY, resolveLocale } from "@/lib/locale";
+import { getActiveSeason } from "@/lib/season";
 import {
   DEFAULT_OG_IMAGE,
   SITE_ALTERNATE_LOCALE,
@@ -97,12 +99,15 @@ export default async function RootLayout({
   ]);
   const cookieLocale = cookieStore.get(LOCALE_COOKIE_KEY)?.value;
   const locale = resolveLocale(cookieLocale ?? DEFAULT_LOCALE);
+  // Decoration only; evaluated per request (the layout is already dynamic via cookies()).
+  const season = getActiveSeason();
 
   return (
     <html
       lang={locale}
       data-locale={locale}
       data-theme={DEFAULT_THEME}
+      data-season={season ?? undefined}
       suppressHydrationWarning
       className={`${outfit.variable} ${notoSansKhmer.variable} ${bebasNeue.variable} h-full scroll-smooth antialiased`}
     >
@@ -111,9 +116,11 @@ export default async function RootLayout({
         <ThemeProvider>
           <LocaleProvider>
             <CartHydrator />
+            {season ? <HolidayBanner season={season} /> : null}
             {children}
             <Footer categories={categories} />
             <AnalyticsScripts />
+            {season ? <SeasonParticles season={season} /> : null}
           </LocaleProvider>
         </ThemeProvider>
       </body>

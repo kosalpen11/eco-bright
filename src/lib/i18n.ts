@@ -473,6 +473,8 @@ export const uiText = {
       sort: "Sort",
       chipSearch: "Search",
       chipBrand: "Brand",
+      showFilters: "Filters",
+      hideFilters: "Hide filters",
       chipMin: "Min",
       chipMax: "Max",
       pagination: "Pagination",
@@ -533,6 +535,11 @@ export const uiText = {
       contactTelegram: "Contact us on Telegram",
       breadcrumb: "Breadcrumb",
       categories: "Product categories",
+      holiday: {
+        cta: "Browse LED lights",
+        waterFestival: "Happy Water Festival! Light up your home and shop with Eco Bright.",
+        christmas: "Merry Christmas & Happy New Year! Light up your holidays with Eco Bright.",
+      },
       trust: {
         delivery: "Delivery across Cambodia",
         warranty: "Product warranty",
@@ -886,6 +893,8 @@ export const uiText = {
       sort: "តម្រៀប",
       chipSearch: "ស្វែងរក",
       chipBrand: "ម៉ាក",
+      showFilters: "តម្រង",
+      hideFilters: "លាក់តម្រង",
       chipMin: "ទាបបំផុត",
       chipMax: "ខ្ពស់បំផុត",
       pagination: "ទំព័រ",
@@ -946,6 +955,11 @@ export const uiText = {
       contactTelegram: "ទាក់ទងយើងតាម Telegram",
       breadcrumb: "ទីតាំងទំព័រ",
       categories: "ប្រភេទផលិតផល",
+      holiday: {
+        cta: "មើលអំពូល LED",
+        waterFestival: "រីករាយពិធីបុណ្យអុំទូក បណ្ដែតប្រទីប អកអំបុក និងសំពះព្រះខែ! បំភ្លឺផ្ទះ និងហាងរបស់អ្នកជាមួយ Eco Bright។",
+        christmas: "រីករាយបុណ្យណូអែល និងឆ្នាំថ្មី! តុបតែងរដូវបុណ្យរបស់អ្នកឱ្យភ្លឺស្វាងជាមួយ Eco Bright។",
+      },
       trust: {
         delivery: "ដឹកជញ្ជូនទូទាំងកម្ពុជា",
         warranty: "មានការធានាលើផលិតផល",
