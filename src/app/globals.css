@@ -305,3 +305,300 @@ textarea {
     opacity: 0.6;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Seasonal decoration (set by the root layout via <html data-season>, see src/lib/season.ts).
+   Purely visual; everything below is scoped to the attribute and safe to leave in place.
+   --------------------------------------------------------------------------- */
+:root[data-season="water-festival"] {
+  --season-banner-from: #021f6e;
+  --season-banner-mid: #0a3fa8;
+  --season-banner-glow: rgba(247, 201, 72, 0.28);
+  --season-banner-link: #ffd866;
+  --season-page-glow: rgba(10, 63, 168, 0.07);
+}
+
+:root[data-season="christmas"] {
+  --season-banner-from: #8c1c17;
+  --season-banner-mid: #b3261e;
+  --season-banner-glow: rgba(247, 201, 72, 0.22);
+  --season-banner-link: #f7c948;
+  --season-page-glow: rgba(179, 38, 30, 0.08);
+}
+
+:root[data-season] body {
+  background-image:
+    radial-gradient(circle at top right, var(--app-primary-soft), transparent 28%),
+    radial-gradient(circle at left 18%, var(--season-page-glow), transparent 24%),
+    radial-gradient(circle at 60% 18%, var(--app-accent-soft), transparent 18%),
+    linear-gradient(180deg, var(--app-bg-soft), var(--app-bg) 34%);
+}
+
+/* Greeting strip above the header. White text is >= 6.6:1 on both banner colours. */
+.holiday-banner {
+  position: relative;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 8% 50%, var(--season-banner-glow), transparent 18%),
+    radial-gradient(circle at 92% 50%, var(--season-banner-glow), transparent 18%),
+    linear-gradient(90deg, var(--season-banner-from), var(--season-banner-mid) 50%, var(--season-banner-from));
+}
+
+.holiday-banner a {
+  color: var(--season-banner-link);
+}
+
+/* Shared: a decorative strip hanging under the sticky header (two layers animate in turn). */
+:root[data-season] .site-header::before,
+:root[data-season] .site-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 16px;
+  pointer-events: none;
+  background-repeat: repeat-x;
+}
+
+/* Water Festival: river waves with gold floating lights bobbing on them. */
+/* Kept to 8px so it never covers the trust-strip icons below the header. */
+:root[data-season="water-festival"] .site-header::before,
+:root[data-season="water-festival"] .site-header::after {
+  height: 8px;
+}
+
+:root[data-season="water-festival"] .site-header::before {
+  background-image:
+    radial-gradient(ellipse 14px 8px at 14px -2px, transparent 90%, rgba(10, 63, 168, 0.28) 92% 100%, transparent 101%),
+    linear-gradient(rgba(10, 63, 168, 0.08), transparent);
+  background-size: 28px 8px, 100% 8px;
+  animation: season-river 6s linear infinite;
+}
+
+:root[data-season="water-festival"] .site-header::after {
+  background-image:
+    radial-gradient(circle at 20px 4px, #ffd24a 0 2.2px, transparent 3.2px),
+    radial-gradient(circle at 76px 4px, #ff9f1c 0 2.2px, transparent 3.2px),
+    radial-gradient(circle at 130px 4px, #ffd24a 0 1.8px, transparent 2.8px);
+  background-size: 168px 8px;
+  filter: drop-shadow(0 0 3px rgba(255, 190, 60, 0.9));
+  animation:
+    season-river 14s linear infinite reverse,
+    season-twinkle 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes season-river {
+  from { background-position-x: 0, 0; }
+  to { background-position-x: 168px, 0; }
+}
+
+/* Christmas: a string of LED lights. */
+:root[data-season="christmas"] .site-header::before,
+:root[data-season="christmas"] .site-header::after {
+  background-size: 96px 16px;
+}
+
+:root[data-season="christmas"] .site-header::before {
+  background-image:
+    radial-gradient(ellipse 4px 5.5px at 12px 9px, #e53935 0 90%, transparent 100%),
+    radial-gradient(ellipse 4px 5.5px at 60px 9px, #fbc02d 0 90%, transparent 100%),
+    linear-gradient(transparent 2px, rgba(36, 50, 35, 0.35) 2px 3px, transparent 3px);
+  filter: drop-shadow(0 0 3px rgba(255, 170, 60, 0.75));
+  animation: season-twinkle 1.8s ease-in-out infinite alternate;
+}
+
+:root[data-season="christmas"] .site-header::after {
+  background-image:
+    radial-gradient(ellipse 4px 5.5px at 36px 9px, #2e9d4a 0 90%, transparent 100%),
+    radial-gradient(ellipse 4px 5.5px at 84px 9px, #1e88e5 0 90%, transparent 100%);
+  filter: drop-shadow(0 0 3px rgba(120, 200, 255, 0.75));
+  animation: season-twinkle 1.8s ease-in-out -0.9s infinite alternate;
+}
+
+@keyframes season-twinkle {
+  from { opacity: 1; }
+  to { opacity: 0.35; }
+}
+
+/* Page particles; never intercept taps and sit under the sticky header. */
+.season-particles {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.season-particles span {
+  position: absolute;
+  line-height: 1;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+/* Christmas: snowfall. */
+.season-particles--christmas span {
+  top: -2rem;
+  color: rgba(110, 160, 190, 0.7);
+  animation-name: season-snowfall;
+}
+
+@keyframes season-snowfall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(24px, 55vh, 0) rotate(180deg); }
+  100% { transform: translate3d(-8px, 110vh, 0) rotate(360deg); }
+}
+
+/* Water Festival: small glowing lights drifting up like floats on the river at night. */
+.season-particles--water-festival span {
+  bottom: -1rem;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff3c4 0 25%, #ffc93c 55%, rgba(255, 160, 40, 0) 72%);
+  box-shadow: 0 0 10px 2px rgba(255, 186, 60, 0.45);
+  animation-name: season-float-up;
+}
+
+/* Phones: half as many particles so they never compete with product cards. */
+@media (max-width: 639px) {
+  .season-particles span:nth-child(even) {
+    display: none;
+  }
+}
+
+@keyframes season-float-up {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: 0.6; }
+  50% { transform: translate3d(18px, -55vh, 0); }
+  85% { opacity: 0.45; }
+  100% { transform: translate3d(-6px, -110vh, 0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-particles {
+    display: none;
+  }
+
+  :root[data-season] .site-header::before,
+  :root[data-season] .site-header::after {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Water Festival scene (src/components/layout/water-festival-scene.tsx). */
+.wf-scene {
+  height: 104px;
+  overflow: hidden;
+  background: #03123d;
+}
+
+@media (min-width: 640px) {
+  .wf-scene { height: 150px; }
+}
+
+@media (min-width: 1024px) {
+  .wf-scene { height: 180px; }
+}
+
+.wf-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wf-scene g,
+.wf-scene line,
+.wf-scene circle,
+.wf-scene rect {
+  transform-box: fill-box;
+}
+
+.wf-star { animation: season-twinkle 2.4s ease-in-out infinite alternate; }
+.wf-palace { filter: drop-shadow(0 0 4px rgba(255, 207, 90, 0.55)); }
+.wf-reflection { animation: wf-shimmer 2.2s ease-in-out infinite alternate; }
+
+@keyframes wf-shimmer {
+  from { opacity: 0.85; transform: translateX(0) scaleX(1); }
+  to { opacity: 0.3; transform: translateX(4px) scaleX(0.8); }
+}
+
+.wf-waves { animation: wf-waves 3s linear infinite; }
+
+@keyframes wf-waves {
+  from { transform: translateX(0); }
+  to { transform: translateX(60px); }
+}
+
+.wf-firework {
+  transform-origin: center;
+  opacity: 0;
+  animation: wf-firework 5s ease-out infinite;
+}
+
+@keyframes wf-firework {
+  0% { transform: scale(0.1); opacity: 0; }
+  6% { opacity: 1; }
+  30% { transform: scale(1); opacity: 0.9; }
+  45% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+.wf-float { animation: wf-float 18s linear infinite; }
+
+@keyframes wf-float {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(60px, -3px); }
+  50% { transform: translate(120px, 0); }
+  75% { transform: translate(180px, -3px); }
+  100% { transform: translate(240px, 0); }
+}
+
+.wf-boat { animation-timing-function: linear; animation-iteration-count: infinite; }
+.wf-boat--slow { animation-name: wf-boat-slow; animation-duration: 24s; }
+.wf-boat--fast { animation-name: wf-boat-fast; animation-duration: 19s; animation-delay: -8s; }
+
+/* Boats cross the full 2400-unit river (x -700..1900). */
+@keyframes wf-boat-slow {
+  from { transform: translateX(-1080px); }
+  to { transform: translateX(1520px); }
+}
+
+@keyframes wf-boat-fast {
+  from { transform: translateX(-1100px); }
+  to { transform: translateX(1170px); }
+}
+
+.wf-scene .wf-oar {
+  /* Pivot at the paddler's hands (top-right of the oar's box). */
+  transform-origin: 100% 0;
+  animation: wf-paddle 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes wf-paddle {
+  from { transform: rotate(-22deg); }
+  to { transform: rotate(18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-scene *,
+  .wf-scene *::before,
+  .wf-scene *::after {
+    animation: none !important;
+  }
+
+  .wf-firework { opacity: 0.9; }
+}
+
+.wf-scene .wf-flag rect {
+  transform-origin: 0 50%;
+  animation: wf-flag 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes wf-flag {
+  from { transform: skewY(-4deg) scaleX(1); }
+  to { transform: skewY(4deg) scaleX(0.92); }
+}

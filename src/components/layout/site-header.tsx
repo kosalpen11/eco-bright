@@ -117,7 +117,7 @@ export function SiteHeader({
 
   return (
     <>
-      <header className="hide-on-print sticky top-0 z-40 border-b border-[var(--app-border)] bg-[rgba(248,250,247,0.94)] backdrop-blur">
+      <header className="site-header hide-on-print sticky top-0 z-40 border-b border-[var(--app-border)] bg-[rgba(248,250,247,0.94)] backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <Link href="/products" className="flex min-h-11 min-w-0 flex-1 items-center gap-2 sm:flex-none">
             <Image
