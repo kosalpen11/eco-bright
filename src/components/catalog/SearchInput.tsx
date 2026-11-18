@@ -54,8 +54,9 @@ export function SearchInput() {
         type="search"
         defaultValue={query}
         placeholder={copy.searchPlaceholder}
+        aria-label={copy.searchPlaceholder}
         onChange={(e) => scheduleUpdate(e.currentTarget.value)}
-        className="h-12 w-full rounded-full border border-[var(--app-border)] bg-white pl-10 pr-11 text-sm text-[var(--app-text)] shadow-sm outline-none placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-primary)] focus:bg-[var(--app-bg-soft)]"
+        className="h-11 w-full rounded-full border border-[var(--app-border)] bg-white pl-10 pr-11 text-sm text-[var(--app-text)] outline-none placeholder:text-[var(--app-text-faint)] focus:border-[var(--app-primary)] focus:bg-[var(--app-bg-soft)] lg:h-10"
       />
       {query ? (
         <button

@@ -1,5 +1,5 @@
 import { permanentRedirect } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
+import { BadgePercent, SlidersHorizontal, X } from "lucide-react";
 
 import { BrandSelect } from "@/components/catalog/BrandSelect";
 import { CatalogCartRail } from "@/components/catalog/CatalogCartRail";
@@ -9,6 +9,7 @@ import {
   CatalogResults,
 } from "@/components/catalog/catalog-navigation";
 import { MobileFilterPanel } from "@/components/catalog/MobileFilterPanel";
+import { MobileInfiniteProducts } from "@/components/catalog/MobileInfiniteProducts";
 import { Pagination } from "@/components/catalog/Pagination";
 import { PriceRangeFilter } from "@/components/catalog/PriceRangeFilter";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
@@ -20,7 +21,8 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildCatalogHref } from "@/lib/catalog-url";
 import { parseCatalogSearchParams, type CatalogSearchParams } from "@/lib/catalog-params";
-import { getCachedCatalogListing, getCachedRecommendedProducts } from "@/lib/db/cached-products";
+import { getProductDiscount } from "@/components/catalog/catalog-helpers";
+import { getCachedCatalogListing, getCachedPromotionalProducts, getCachedRecommendedProducts } from "@/lib/db/cached-products";
 import { getUiText, localizeText } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/locale-server";
 import { getActiveProducts, mapProductToPublicProduct } from "@/lib/public-products";
@@ -80,9 +82,11 @@ export async function CatalogPage({
   // The recommended row only shows on the plain first page (no search, filters or sort).
   const isUnfiltered =
     !q && !category && !brand && minPrice === null && maxPrice === null && sort === "default" && page === 1;
-  const [listing, recommended] = await Promise.all([
+  // Promotions + recommended rows only show on the plain first page; a failed read just hides the row.
+  const [listing, recommended, promotions] = await Promise.all([
     getCachedCatalogListing(filters),
     isUnfiltered ? getCachedRecommendedProducts(8).catch(() => []) : Promise.resolve([]),
+    isUnfiltered ? getCachedPromotionalProducts(12).catch(() => []) : Promise.resolve([]),
   ]);
 
   const ui = getUiText(locale);
@@ -102,6 +106,15 @@ export async function CatalogPage({
     "price-desc": ui.catalog.sortPriceDesc,
     "name-asc": ui.catalog.sortNameAsc,
   };
+  const infiniteQuery = {
+    q,
+    category: canonicalParams.category,
+    brand,
+    min: minPrice !== null ? String(minPrice) : null,
+    max: maxPrice !== null ? String(maxPrice) : null,
+    sort: canonicalParams.sort,
+  };
+  const infiniteQueryKey = JSON.stringify({ ...infiniteQuery, page: listing.page });
   const hero = buildBrowseTitle({ brand: brandLabel, category: categoryLabel, query: q, total: listing.total }, copy);
   const activeFilterChips = [
     q ? `${copy.chipSearch}: ${q}` : null,
@@ -121,6 +134,10 @@ export async function CatalogPage({
   // Organization + WebSite on the plain home page, BreadcrumbList on category pages.
   const listName = activeCategory ? getCategoryTitle(activeCategory) : hero.title;
   const recommendedPublic = getActiveProducts(recommended).map(mapProductToPublicProduct);
+  // Only products whose card actually shows a discount, so the row never shows a full-price item.
+  const promotionsPublic = getActiveProducts(promotions)
+    .map(mapProductToPublicProduct)
+    .filter((product) => getProductDiscount(product) !== null);
   const structuredData: Array<Record<string, unknown>> = [];
   if (isUnfiltered) structuredData.push(organizationJsonLd(), websiteJsonLd());
   if (category && activeCategory) {
@@ -142,88 +159,86 @@ export async function CatalogPage({
 
       <main className="mx-auto grid w-full max-w-7xl gap-6 px-3 py-4 sm:px-4 sm:py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
-          <section className="rounded-[1.6rem] border border-[var(--app-border)] bg-white p-4 shadow-[var(--app-shadow-surface)] sm:p-5">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <div className="locale-label flex items-center gap-2 text-xs font-semibold uppercase text-[var(--app-text-muted)]">
-                    <SlidersHorizontal className="size-4" aria-hidden="true" />
-                    {hero.eyebrow}
-                  </div>
-                  <h1 className="mt-1 text-xl font-bold text-[var(--app-text)] sm:text-2xl">{hero.title}</h1>
-                  <p className="mt-2 text-sm text-[var(--app-text-muted)]">
-                    {hero.subtitle} {copy.showingOnPage(publicProducts.length)}
-                  </p>
+          <section className="rounded-[1.4rem] border border-[var(--app-border)] bg-white p-3 shadow-[var(--app-shadow-surface)] sm:p-4">
+            {/* Title + count on one line, then a single toolbar row: search · brand · sort · price. */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="locale-label flex items-center gap-1.5 text-[11px] font-semibold uppercase text-[var(--app-text-muted)]">
+                  <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+                  {hero.eyebrow}
                 </div>
-
-                {hasActiveFilters ? (
-                  <CatalogLink
-                    href="/products"
-                    className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-4 text-sm font-semibold text-[var(--app-text-soft)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface-2)]"
-                  >
-                    <X className="size-4" aria-hidden="true" />
-                    {ui.states.clearFilters}
-                  </CatalogLink>
-                ) : null}
+                <h1 className="mt-0.5 truncate text-lg font-bold leading-tight text-[var(--app-text)] sm:text-xl">
+                  {hero.title}
+                </h1>
               </div>
+              <p className="shrink-0 pt-4 text-xs font-medium text-[var(--app-text-muted)] sm:text-sm">
+                {copy.resultCount(listing.total)}
+              </p>
+            </div>
 
-              {hasActiveFilters ? (
-                <ul className="flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1 basis-[12rem]">
+                <SearchInput />
+              </div>
+              {/* Phones: brand, sort and price fold behind the compact "Filters" button. */}
+              <MobileFilterPanel activeCount={activeFilterCount} labels={{ show: copy.showFilters, hide: copy.hideFilters }}>
+                <BrandSelect brands={listing.brands} activeBrand={brandLabel ?? null} />
+                <SortSelect />
+                <div className="col-span-2 min-w-0">
+                  <PriceRangeFilter
+                    min={minPrice}
+                    max={maxPrice}
+                    preserved={{
+                      q,
+                      category: canonicalParams.category,
+                      brand,
+                      sort: canonicalParams.sort,
+                    }}
+                    clearHref={buildListingHref({ ...canonicalParams, min: null, max: null, page: null })}
+                    labels={{
+                      price: ui.catalog.price,
+                      min: ui.catalog.min,
+                      max: ui.catalog.max,
+                      to: ui.catalog.to,
+                      apply: copy.apply,
+                      clear: copy.clearPriceRange,
+                    }}
+                  />
+                </div>
+              </MobileFilterPanel>
+            </div>
+
+            {hasActiveFilters ? (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--app-border)] pt-3">
+                <ul className="contents">
                   {activeFilterChips.map((label) => (
                     <li
                       key={label}
-                      className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-soft)]"
+                      className="rounded-full bg-[var(--app-surface)] px-2.5 py-1 text-xs font-medium text-[var(--app-text-soft)]"
                     >
                       {label}
                     </li>
                   ))}
                 </ul>
-              ) : null}
-
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
-                <div>
-                  <div className="locale-label mb-2 text-xs font-medium uppercase text-[var(--app-text-muted)]">
-                    {copy.searchProducts}
-                  </div>
-                  <SearchInput />
-                </div>
-                {/* Phones: brand, sort and price fold behind one "Filters" button; desktop is unchanged. */}
-                <MobileFilterPanel activeCount={activeFilterCount} labels={{ show: copy.showFilters, hide: copy.hideFilters }}>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <BrandSelect brands={listing.brands} activeBrand={brandLabel ?? null} />
-                    <div className="min-w-0">
-                      <div className="locale-label mb-2 text-xs font-medium uppercase text-[var(--app-text-muted)]">
-                        {copy.sort}
-                      </div>
-                      <SortSelect />
-                    </div>
-                  </div>
-
-                  <div className="xl:col-span-2">
-                    <PriceRangeFilter
-                      min={minPrice}
-                      max={maxPrice}
-                      preserved={{
-                        q,
-                        category: canonicalParams.category,
-                        brand,
-                        sort: canonicalParams.sort,
-                      }}
-                      clearHref={buildListingHref({ ...canonicalParams, min: null, max: null, page: null })}
-                      labels={{
-                        price: ui.catalog.price,
-                        min: ui.catalog.min,
-                        max: ui.catalog.max,
-                        to: ui.catalog.to,
-                        apply: copy.apply,
-                        clear: copy.clearPriceRange,
-                      }}
-                    />
-                  </div>
-                </MobileFilterPanel>
+                <CatalogLink
+                  href="/products"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-[var(--app-primary)] hover:bg-[var(--app-primary-soft)]"
+                >
+                  <X className="size-3.5" aria-hidden="true" />
+                  {ui.states.clearFilters}
+                </CatalogLink>
               </div>
-            </div>
+            ) : null}
           </section>
+
+          <RecommendedProducts
+            products={promotionsPublic}
+            locale={locale}
+            title={ui.productPage.promotions}
+            id="promotion-products"
+            icon={BadgePercent}
+            analyticsLocation="promotions_row"
+          />
 
           <RecommendedProducts
             products={recommendedPublic}
@@ -238,11 +253,22 @@ export async function CatalogPage({
             {/* While a filter/sort/page change loads, the grid is swapped for a same-size skeleton. */}
             <CatalogResults skeleton={<ProductGridSkeleton count={Math.min(8, Math.max(publicProducts.length, 4))} />}>
               <ProductGrid products={publicProducts} locale={locale} />
+              {/* Phones: the next 20 load as you scroll; remounts (starts over) when filters change. */}
+              <MobileInfiniteProducts
+                key={infiniteQueryKey}
+                locale={locale}
+                initialPage={listing.page}
+                total={listing.total}
+                pageSize={listing.pageSize}
+                initialIds={publicProducts.map((product) => product.id)}
+                query={infiniteQuery}
+              />
             </CatalogResults>
           </section>
 
+          {/* Numbered pages on desktop; phones use the infinite scroll above. */}
           {listing.total > listing.pageSize ? (
-            <div className="mt-8">
+            <div className="mt-8 hidden lg:block">
               <Pagination total={listing.total} page={listing.page} pageSize={listing.pageSize} />
             </div>
           ) : null}

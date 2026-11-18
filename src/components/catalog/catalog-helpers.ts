@@ -75,6 +75,36 @@ export function getEffectiveOldPrice(
   return variant?.oldPrice ?? product.oldPrice;
 }
 
+export interface ProductDiscount {
+  price: number;
+  oldPrice: number;
+  /** Whole percent off, e.g. 50 for $29 → $14.50. */
+  percent: number;
+}
+
+/**
+ * The discount shown on a card: the old price of the option that sets the "from" price
+ * (product.price), falling back to the product's old price. Null when nothing is on sale.
+ */
+export function getProductDiscount(
+  product: Pick<PublicProduct, "price" | "oldPrice" | "variants">,
+): ProductDiscount | null {
+  const pricedVariants = product.variants.filter((variant) => typeof variant.price === "number");
+  const pairs = pricedVariants.length
+    ? pricedVariants
+        .filter((variant) => variant.price === product.price)
+        .map((variant) => ({ price: product.price, oldPrice: variant.oldPrice ?? product.oldPrice }))
+    : [{ price: product.price, oldPrice: product.oldPrice }];
+
+  const best = pairs
+    .filter((pair): pair is { price: number; oldPrice: number } => typeof pair.oldPrice === "number" && pair.oldPrice > pair.price)
+    .sort((a, b) => b.oldPrice - a.oldPrice)[0];
+  if (!best || best.price <= 0) return null;
+
+  const percent = Math.round((1 - best.price / best.oldPrice) * 100);
+  return percent > 0 ? { ...best, percent } : null;
+}
+
 export function getEffectiveImage(
   product: Pick<PublicProduct, "imageUrl" | "imageUrls">,
   variant?: Pick<PublicProductVariant, "imageUrl"> | null,

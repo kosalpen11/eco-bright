@@ -1,6 +1,8 @@
 "use client";
 
+import { ArrowUpDown } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { FILTER_SELECT_CLASS, FILTER_SELECT_ICON_CLASS } from "@/components/catalog/BrandSelect";
 import { useCatalogRouter } from "@/components/catalog/catalog-navigation";
 
 import type { ProductSortMode } from "@/lib/types";
@@ -46,12 +48,13 @@ export function SortSelect() {
   }
 
   return (
+    <div className="relative min-w-0">
     <select
       aria-label={copy.sortBy}
       key={value}
       defaultValue={value}
       onChange={(e) => setSort(e.currentTarget.value as ProductSortMode)}
-      className="h-11 rounded-full border border-[var(--app-border)] bg-white px-4 text-sm text-[var(--app-text)] outline-none focus:border-[var(--app-primary)]"
+      className={FILTER_SELECT_CLASS}
     >
       {OPTIONS.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -59,5 +62,7 @@ export function SortSelect() {
         </option>
       ))}
     </select>
+    <ArrowUpDown className={FILTER_SELECT_ICON_CLASS} aria-hidden="true" />
+    </div>
   );
 }

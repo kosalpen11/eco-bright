@@ -10,7 +10,7 @@ import type {
   ProductVariant,
 } from "@/lib/types";
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 20;
 
 type SqlClient = NeonQueryFunction<false, false>;
 
@@ -539,6 +539,30 @@ export async function getRecommendedProducts(limit = 8): Promise<Product[]> {
     ${productJoins(sql)}
     WHERE p.is_active = true AND NULLIF(to_jsonb(p) ->> 'featured_rank', '') IS NOT NULL
     ORDER BY (to_jsonb(p) ->> 'featured_rank')::int ASC, p.title ASC
+    LIMIT ${limit}
+  `;
+  return rows.map(mapProductRow);
+}
+
+/**
+ * Products on sale: an old price above the current price on the product or on any active option.
+ * The storefront re-checks each one with getProductDiscount() so the row matches what the card shows.
+ */
+export async function getPromotionalProducts(limit = 12): Promise<Product[]> {
+  const sql = getSql();
+  const rows = await sql`
+    ${productSelect(sql)}
+    FROM products p
+    ${productJoins(sql)}
+    WHERE p.is_active = true
+      AND (
+        p.old_price > p.price
+        OR EXISTS (
+          SELECT 1 FROM product_variants pv
+          WHERE pv.product_id = p.id AND pv.is_active = true AND pv.old_price > pv.price
+        )
+      )
+    ORDER BY p.sort_order ASC NULLS LAST, p.title ASC
     LIMIT ${limit}
   `;
   return rows.map(mapProductRow);

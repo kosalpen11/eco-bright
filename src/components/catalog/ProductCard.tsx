@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AddToCartButton } from "@/components/catalog/AddToCartButton";
 import { CardOrderLink } from "@/components/catalog/CardOrderLink";
 import { TelegramIcon } from "@/components/layout/site-header";
-import { getEffectiveOldPrice, getRatingLabel, optimizeImageUrl } from "@/components/catalog/catalog-helpers";
+import { getProductDiscount, getRatingLabel, optimizeImageUrl } from "@/components/catalog/catalog-helpers";
 import type { Locale } from "@/lib/locale";
 import { getUiText, localizeText } from "@/lib/i18n";
 import { buildProductOrderHref, formatPriceRange, formatUsd } from "@/lib/product-order-link";
@@ -27,7 +27,7 @@ export function ProductCard({
   const image = getDisplayProductImage(product, product.variants);
   const price = product.price;
   const priceText = formatPriceRange(product.price, product.priceMax, product.currency);
-  const oldPrice = getEffectiveOldPrice(product, product.variants[0] ?? null);
+  const discount = getProductDiscount(product);
   const ratingLabel = getRatingLabel(product.rating);
   const copy = getUiText(locale).productPage;
   const href = `/products/${encodeURIComponent(product.slug)}`;
@@ -54,13 +54,18 @@ export function ProductCard({
           )}
 
           <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
-            {product.badge ? (
-              <span className="rounded-full bg-[var(--app-accent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text)]">
-                {product.badge}
-              </span>
-            ) : (
-              <span />
-            )}
+            <div className="flex flex-col items-start gap-1">
+              {discount ? (
+                <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white">
+                  -{discount.percent}%
+                </span>
+              ) : null}
+              {product.badge ? (
+                <span className="rounded-full bg-[var(--app-accent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text)]">
+                  {product.badge}
+                </span>
+              ) : null}
+            </div>
 
             {ratingLabel ? (
               <span className="rounded-full border border-[var(--app-border)] bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text-soft)]">
@@ -85,10 +90,21 @@ export function ProductCard({
 
         <div className="mt-3">
           {/* Option range, e.g. "$8.75 – $65"; a single price when there is no range. */}
-          <div className="text-base font-bold leading-tight text-[var(--app-primary)] sm:text-lg">{priceText}</div>
-          {oldPrice && oldPrice > price ? (
-            <div className="text-xs text-[var(--app-text-faint)] line-through">{formatUsd(oldPrice, product.currency)}</div>
-          ) : null}
+          {/* On sale: discounted price in red with the original price struck through beside it. */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span
+              className={`text-base font-bold leading-tight sm:text-lg ${
+                discount ? "text-red-600" : "text-[var(--app-primary)]"
+              }`}
+            >
+              {priceText}
+            </span>
+            {discount ? (
+              <s className="text-sm font-medium text-[var(--app-text-muted)]">
+                {formatUsd(discount.oldPrice, product.currency)}
+              </s>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-2">
